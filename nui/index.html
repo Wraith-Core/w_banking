@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Vendored assets (nui/vendor) and the RDR / Tajawal fonts (nui/fonts) -->
+    <link rel="stylesheet" href="vendor/bootstrap.min.css">
+    <link rel="stylesheet" href="style.css">
+
+    <title>Banking</title>
+</head>
+
+<body>
+
+    <div class="container" id="bankingContainer">
+        <div class="row">
+            <div class="col-3">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="bank-brand" data-i18n="ui.title"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="nav flex-column nav-pills p-2 shadow-lg bank-nav" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                                <a class="nav-link active m-1" id="bankingHome-tab" data-toggle="pill" href="#bankingHome" role="tab" aria-controls="bankingHome" aria-selected="true" data-i18n="ui.tab_account"></a>
+                                <a class="nav-link m-1" id="bankingWithdraw-tab" data-toggle="pill" href="#bankingWithdraw" role="tab" aria-controls="bankingWithdraw" aria-selected="false" data-i18n="ui.tab_withdraw"></a>
+                                <a class="nav-link m-1" id="bankingDeposit-tab" data-toggle="pill" href="#bankingDeposit" role="tab" aria-controls="bankingDeposit" aria-selected="false" data-i18n="ui.tab_deposit"></a>
+                                <a class="nav-link m-1" id="bankingTransfer-tab" data-toggle="pill" href="#bankingTransfer" role="tab" aria-controls="bankingTransfer" aria-selected="false" data-i18n="ui.tab_transfer"></a>
+                                <a class="nav-link m-1" id="bankingActions-tab" data-toggle="pill" href="#bankingActions" role="tab" aria-controls="bankingActions" aria-selected="false" data-i18n="ui.tab_options"></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <div class="card mb-3 bank-card bank-info">
+                                <div class="card-header" data-i18n="ui.account_info"></div>
+                                <div class="card-body">
+                                    <p class="card-text"><small>
+                                        <span data-i18n="ui.account_name"></span> <span id="accountName"></span><br>
+                                        <span data-i18n="ui.account_number"></span> <span id="accountNumber"></span>
+                                    </small></p>
+                                </div>
+                            </div>
+                            <p class="close-hint" data-i18n="ui.close_hint"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-9">
+
+                <!-- Content Area -->
+                <div class="tab-content p-2 shadow-lg bank-content" id="v-pills-tabContent">
+                    <div class="row" id="alertRow" style="display:none;">
+                        <div class="col-12">
+                            <div class="alert alert-success" role="alert" id="alertMessage"></div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade show active" id="bankingHome" role="tabpanel" aria-labelledby="bankingHome-tab">
+                        <div class="container-fluid p-2">
+                            <div class="row">
+                                <div class="col-12 title">
+                                    <h3 class="bank-title" id="customerWelcome"></h3>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="card mb-3 bank-card">
+                                        <div class="card-header" data-i18n="ui.bank_balance"></div>
+                                        <div class="card-body">
+                                            <h5 class="card-title balance" id="currentBalance"></h5>
+                                            <p class="card-text" data-i18n="ui.bank_balance_hint"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="card mb-3 bank-card">
+                                        <div class="card-header" data-i18n="ui.cash_balance"></div>
+                                        <div class="card-body">
+                                            <h5 class="card-title balance" id="currentCashBalance"></h5>
+                                            <p class="card-text" data-i18n="ui.cash_balance_hint"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="bankingWithdraw" role="tabpanel" aria-labelledby="bankingWithdraw-tab">
+                        <div class="container-fluid p-2">
+                            <div class="row">
+                                <div class="col-12 title">
+                                    <h3 class="bank-title" data-i18n="ui.withdraw_title"></h3>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12 smalltext" data-i18n="ui.withdraw_text"></div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-6">
+                                    <div class="card mb-3 bank-card">
+                                        <div class="card-header" data-i18n="ui.bank_balance"></div>
+                                        <div class="card-body">
+                                            <h5 class="card-title balance text-success" id="currentBalance1"></h5>
+                                            <p class="card-text" data-i18n="ui.bank_balance_hint"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="card mb-3 bank-card">
+                                        <div class="card-header" data-i18n="ui.cash_balance"></div>
+                                        <div class="card-body">
+                                            <h5 class="card-title balance text-success" id="currentCashBalance1"></h5>
+                                            <p class="card-text" data-i18n="ui.cash_balance_hint"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <div class="card mb-3 bank-card">
+                                        <div class="card-body">
+                                            <div class="container-fluid">
+                                                <div class="row" id="withdrawError" style="display:none;">
+                                                    <div class="col-12">
+                                                        <div class="alert alert-danger" role="alert" id="withdrawErrorMsg"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="row mt-2">
+                                                    <div class="col-3 my-auto form-label"><label for="withdrawAmount"><small data-i18n="ui.withdraw_amount"></small></label></div>
+                                                    <div class="col-9"><input type="number" min="1" data-i18n-placeholder="ui.amount_placeholder" class="form-control" id="withdrawAmount" name="withdrawAmount"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12 text-center"><button class="btn bank-btn" id="initiateWithdraw" data-i18n="ui.withdraw_button"></button></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="bankingDeposit" role="tabpanel" aria-labelledby="bankingDeposit-tab">
+                        <div class="container-fluid p-2">
+                            <div class="row">
+                                <div class="col-12 title">
+                                    <h3 class="bank-title" data-i18n="ui.deposit_title"></h3>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12 smalltext" data-i18n="ui.deposit_text"></div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-6">
+                                    <div class="card mb-3 bank-card">
+                                        <div class="card-header" data-i18n="ui.bank_balance"></div>
+                                        <div class="card-body">
+                                            <h5 class="card-title balance text-success" id="currentBalance2"></h5>
+                                            <p class="card-text" data-i18n="ui.bank_balance_hint"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="card mb-3 bank-card">
+                                        <div class="card-header" data-i18n="ui.cash_balance"></div>
+                                        <div class="card-body">
+                                            <h5 class="card-title balance text-success" id="currentCashBalance2"></h5>
+                                            <p class="card-text" data-i18n="ui.cash_balance_hint"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <div class="card mb-3 bank-card">
+                                        <div class="card-body">
+                                            <div class="container-fluid">
+                                                <div class="row" id="depositError" style="display:none;">
+                                                    <div class="col-12">
+                                                        <div class="alert alert-danger" role="alert" id="depositErrorMsg"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="row mt-2">
+                                                    <div class="col-3 my-auto form-label"><label for="depositAmount"><small data-i18n="ui.deposit_amount"></small></label></div>
+                                                    <div class="col-9"><input type="number" min="1" data-i18n-placeholder="ui.amount_placeholder" class="form-control" id="depositAmount" name="depositAmount"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12 text-center"><button class="btn bank-btn" id="initiateDeposit" data-i18n="ui.deposit_button"></button></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="bankingTransfer" role="tabpanel" aria-labelledby="bankingTransfer-tab">
+                        <div class="container-fluid p-2">
+                            <div class="row">
+                                <div class="col-12 title">
+                                    <h3 class="bank-title" data-i18n="ui.transfer_title"></h3>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12 smalltext" data-i18n="ui.transfer_text"></div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <div class="card mb-3 bank-card">
+                                        <div class="card-body">
+                                            <div class="container-fluid">
+                                                <div class="row" id="transferError" style="display:none;">
+                                                    <div class="col-12">
+                                                        <div class="alert alert-danger" role="alert" id="transferErrorMsg"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="row m-1">
+                                                    <div class="col-3 my-auto form-label"><label for="transferAcctNo"><small data-i18n="ui.transfer_account"></small></label></div>
+                                                    <div class="col-9"><input type="text" id="transferAcctNo" name="transferAcctNo" class="form-control" autocomplete="off"></div>
+                                                </div>
+                                                <div class="row m-1">
+                                                    <div class="col-3 my-auto form-label"><label for="transferAmount"><small data-i18n="ui.transfer_amount"></small></label></div>
+                                                    <div class="col-9"><input type="number" min="1" id="transferAmount" name="transferAmount" class="form-control" data-i18n-placeholder="ui.amount_placeholder"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12 text-center">
+                                    <button class="btn bank-btn" id="initiateTransfer" data-i18n="ui.transfer_button"></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="bankingActions" role="tabpanel" aria-labelledby="bankingActions-tab">
+                        <div class="container-fluid p-2">
+                            <div class="row">
+                                <div class="col-12 title">
+                                    <h3 class="bank-title" data-i18n="ui.options_title"></h3>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12 content smalltext">
+                                    <p data-i18n="ui.options_text"></p>
+                                </div>
+                            </div>
+                            <div class="row mt-3" id="savingAccountCreator" style="display:none;">
+                                <div class="col-12">
+                                    <div class="card mb-3 bank-card">
+                                        <div class="card-header" data-i18n="ui.savings_title"></div>
+                                        <div class="card-body">
+                                            <div class="container-fluid">
+                                                <div class="row">
+                                                    <div class="col-12 content">
+                                                        <p data-i18n="ui.savings_create_text"></p>
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-12">
+                                                        <button class="btn btn-block mt-2 bank-btn" id="openSavings" data-i18n="ui.savings_open_button"></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer">
+                                            <p class="card-text"><small data-i18n="ui.savings_footer"></small></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3" id="savingsManager" style="display:none;">
+                                <div class="col-12">
+                                    <div class="card mb-3 bank-card">
+                                        <div class="card-header" data-i18n="ui.savings_title"></div>
+                                        <div class="card-body">
+                                            <div class="container-fluid">
+                                                <div class="row">
+                                                    <div class="col-12">
+                                                        <span data-i18n="ui.savings_balance"></span>
+                                                        <span class="balance text-success" id="savingsBalance"></span>
+                                                        <p class="card-text" data-i18n="ui.savings_balance_hint"></p>
+                                                    </div>
+                                                </div>
+                                                <div class="row" id="savingsError" style="display:none;">
+                                                    <div class="col-12">
+                                                        <div class="alert alert-danger" role="alert" id="savingsErrorMsg"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="row mt-2">
+                                                    <div class="col-3 my-auto form-label"><label for="savingsAmount"><small data-i18n="ui.savings_amount"></small></label></div>
+                                                    <div class="col-9"><input type="number" min="1" id="savingsAmount" name="savingsAmount" class="form-control" data-i18n-placeholder="ui.amount_placeholder"></div>
+                                                </div>
+                                                <div class="row mt-3">
+                                                    <div class="col-6 text-center"><button class="btn bank-btn" id="savingsDepositBtn" data-i18n="ui.savings_deposit_button"></button></div>
+                                                    <div class="col-6 text-center"><button class="btn bank-btn" id="savingsWithdrawBtn" data-i18n="ui.savings_withdraw_button"></button></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer">
+                                            <p class="card-text"><small data-i18n="ui.savings_footer"></small></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery first, then Popper.js, then Bootstrap JS (all local) -->
+    <script src="scripting/external/jquery/jquery.js"></script>
+    <script src="vendor/popper.min.js"></script>
+    <script src="vendor/bootstrap.min.js"></script>
+    <script src="w_banking.js"></script>
+</body>
+
+</html>

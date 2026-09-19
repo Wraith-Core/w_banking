@@ -1,0 +1,204 @@
+/* Fonts shipped with the resource (copied from the library's font set) */
+@font-face {
+    font-family: 'Tajawal';
+    font-style: normal;
+    font-weight: 400;
+    src: url(fonts/tajawal-latin-400-normal.woff2) format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: 'Tajawal';
+    font-style: normal;
+    font-weight: 700;
+    src: url(fonts/tajawal-latin-700-normal.woff2) format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: 'Tajawal';
+    font-style: normal;
+    font-weight: 400;
+    src: url(fonts/tajawal-arabic-400-normal.woff2) format('woff2');
+    unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0898-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+}
+
+@font-face {
+    font-family: 'Tajawal';
+    font-style: normal;
+    font-weight: 700;
+    src: url(fonts/tajawal-arabic-700-normal.woff2) format('woff2');
+    unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0898-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FEFC;
+}
+
+@font-face {
+    font-family: 'RDRLino';
+    font-style: normal;
+    font-weight: 400;
+    src: url(fonts/RDRLino-Regular.woff2) format('woff2');
+}
+
+@font-face {
+    font-family: 'RDRCatalogue';
+    font-style: normal;
+    font-weight: 700;
+    src: url(fonts/RDRCatalogueBold-Bold.woff2) format('woff2');
+}
+
+body {
+    background: transparent !important;
+    margin-top: 80px;
+    font-family: 'Tajawal', 'Segoe UI', sans-serif;
+    color: #000;
+}
+
+#bankingContainer {
+    background: #F9F6EE !important;
+    border-radius: 20px;
+    min-height: 800px;
+    padding-bottom: 20px;
+    display: none;
+}
+
+.bank-brand {
+    font-family: 'RDRLino', 'Tajawal', serif;
+    font-size: 56px;
+    text-align: center;
+    padding: 30px 0 10px 0;
+    border-bottom: 2px solid #000;
+    margin-bottom: 30px;
+}
+
+[dir="rtl"] .bank-brand {
+    font-family: 'Tajawal', sans-serif;
+    font-weight: 700;
+    font-size: 46px;
+}
+
+.alert {
+    font-size: 20px;
+}
+
+.bank-nav {
+    background: rgba(163, 154, 131, 0);
+    position: relative;
+    font-size: 25px;
+    border-radius: 5px;
+    border: dashed black;
+}
+
+.bank-nav .nav-link {
+    color: #000;
+    font-family: 'RDRCatalogue', 'Tajawal', sans-serif;
+}
+
+.bank-nav .nav-link.active {
+    background: rgba(0, 0, 0, 0.12);
+    color: #000;
+}
+
+.bank-info {
+    margin-top: 30px;
+    font-size: 20px;
+}
+
+.close-hint {
+    font-size: 16px;
+    color: #444;
+    text-align: center;
+}
+
+.bank-content {
+    max-height: 780px;
+    min-height: 780px;
+    padding-top: 40px !important;
+    overflow-y: auto;
+}
+
+.bank-card {
+    background: rgba(51, 51, 51, 0);
+    color: #000;
+    font-size: 25px;
+    border: dashed black;
+}
+
+.bank-card .card-text {
+    color: #000;
+}
+
+.balance {
+    font-size: 25px;
+    font-family: 'RDRCatalogue', 'Tajawal', sans-serif;
+}
+
+.bank-title {
+    font-size: 60px;
+    font-family: 'RDRLino', 'Tajawal', serif;
+}
+
+.smalltext,
+.form-label {
+    font-size: 30px;
+    color: #000;
+}
+
+.bank-btn {
+    border: dashed black;
+    font-size: 25px;
+    color: #000;
+    font-family: 'RDRCatalogue', 'Tajawal', sans-serif;
+}
+
+.bank-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.form-control {
+    font-family: 'Tajawal', sans-serif;
+    font-size: 22px;
+}
+
+#v-pills-tabContent::-webkit-scrollbar {
+    width: 10px;
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+    background-color: transparent;
+}
+
+.title {
+    color: #000;
+    border-left: 2px solid #000;
+}
+
+/* Right-to-left (Arabic) */
+[dir="rtl"] body,
+[dir="rtl"] .bank-content,
+[dir="rtl"] .bank-nav,
+[dir="rtl"] .card {
+    text-align: right;
+}
+
+[dir="rtl"] .title {
+    border-left: 0;
+    border-right: 2px solid #000;
+}
+
+[dir="rtl"] .bank-title,
+[dir="rtl"] .bank-nav .nav-link,
+[dir="rtl"] .bank-btn,
+[dir="rtl"] .balance {
+    font-family: 'Tajawal', sans-serif;
+    font-weight: 700;
+}
+
+[dir="rtl"] .bank-title {
+    font-size: 52px;
+}
+
+[dir="rtl"] .form-control {
+    text-align: right;
+}
+
+[dir="rtl"] .text-center {
+    text-align: center !important;
+}
