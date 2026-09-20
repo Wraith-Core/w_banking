@@ -1,55 +1,25 @@
-local function closeBank()
+function CloseBank()
     InBank = false
     SetNuiFocus(false, false)
     SendNUIMessage({ status = 'closebank' })
 end
-
-local function validAmount(amount)
-    local n = tonumber(amount)
-    return n ~= nil and n > 0
+RegisterNUICallback('NUIFocusOff', function(_, cb) CloseBank(); cb({ok=true}) end)
+for _, action in ipairs({'createSavingsAccount','doDeposit','doWithdraw','savingsDeposit','savingsWithdraw','doTransfer'}) do
+    RegisterNUICallback(action, function(data, cb)
+        if not InBank then return cb({ok=false,message=locale('msg.near_bank')}) end
+        local ok, result = pcall(w.callback.triggerServer, 'w_banking:transaction', action, type(data)=='table' and data or {})
+        if not ok or type(result)~='table' then result={ok=false,key='msg.failed'} end
+        result.message = locale(result.key or 'msg.failed', table.unpack(result.args or {}))
+        cb(result)
+    end)
 end
-
-RegisterNUICallback('NUIFocusOff', function(_, cb)
-    closeBank()
-    cb('ok')
+RegisterNUICallback('refresh', function(_,cb)
+    local ok, data = pcall(w.callback.triggerServer,'w_banking:getBankingInformation')
+    cb({ok=ok and data~=nil,information=ok and data or nil})
 end)
 
-RegisterNUICallback('createSavingsAccount', function(_, cb)
-    TriggerServerEvent('w_banking:createSavingsAccount')
-    cb('ok')
-end)
-
-RegisterNUICallback('doDeposit', function(data, cb)
-    if validAmount(data.amount) then
-        TriggerServerEvent('w_banking:doQuickDeposit', data.amount)
-    end
-    cb('ok')
-end)
-
-RegisterNUICallback('doWithdraw', function(data, cb)
-    if validAmount(data.amount) then
-        TriggerServerEvent('w_banking:doQuickWithdraw', data.amount)
-    end
-    cb('ok')
-end)
-
-RegisterNUICallback('savingsDeposit', function(data, cb)
-    if validAmount(data.amount) then
-        TriggerServerEvent('w_banking:savingsDeposit', data.amount)
-    end
-    cb('ok')
-end)
-
-RegisterNUICallback('savingsWithdraw', function(data, cb)
-    if validAmount(data.amount) then
-        TriggerServerEvent('w_banking:savingsWithdraw', data.amount)
-    end
-    cb('ok')
-end)
-
-RegisterNUICallback('doTransfer', function(data, cb)
-    if data and validAmount(data.amount) and data.account then
-        TriggerServerEvent('w_banking:initiateTransfer', data)
-    end
-    cb('ok')
+RegisterNUICallback('central',function(_,cb)
+    CloseBank()
+    exports.w_centralbank:Open()
+    cb({ok=true})
 end)

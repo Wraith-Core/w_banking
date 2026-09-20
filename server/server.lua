@@ -1,259 +1,182 @@
--- Load the stored savings and gang accounts once the wrappers are in.
-CreateThread(function()
-    local savings = MySQL.Sync.fetchAll('SELECT citizenid FROM bank_accounts WHERE account_type = ?', { 'Savings' })
-    for _, v in pairs(savings) do
-        savingsAccounts[v.citizenid] = generateSavings(v.citizenid)
-    end
-
-    local gangs = MySQL.Sync.fetchAll('SELECT gangid FROM bank_accounts WHERE account_type = ?', { 'Gang' })
-    for _, v in pairs(gangs) do
-        gangAccounts[v.gangid] = loadGangAccount(v.gangid)
-    end
+local banks, busy, lastAction = Config.BankLocations, {}, {}
+MySQL.ready(function()
+    local ok, err = pcall(function()
+        local schema = LoadResourceFile(GetCurrentResourceName(), 'w_banking.sql')
+        for statement in schema:gmatch('([^;]+);') do MySQL.query.await(statement) end
+        local hasKey=MySQL.scalar.await("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='bank_statements' AND column_name='request_key'")
+        if tonumber(hasKey)==0 then MySQL.query.await('ALTER TABLE bank_statements ADD COLUMN request_key VARCHAR(190) DEFAULT NULL, ADD UNIQUE KEY cb_request_key (request_key)') end
+        -- These are ledger projections; preserve cents in legacy tables as well.
+        for _,spec in ipairs({{'bank_accounts','amount'},{'bank_statements','deposited'},{'bank_statements','withdraw'},{'bank_statements','balance'}}) do
+            local kind=MySQL.scalar.await('SELECT DATA_TYPE FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=?',spec)
+            if kind and kind~='decimal' then MySQL.query.await(('ALTER TABLE `%s` MODIFY `%s` DECIMAL(18,2) DEFAULT 0'):format(spec[1],spec[2])) end
+        end
+        for _, row in ipairs(MySQL.query.await('SELECT citizenid, gangid, account_type FROM bank_accounts') or {}) do
+            if row.account_type == 'Savings' and row.citizenid then savingsAccounts[row.citizenid] = generateSavings(row.citizenid)
+            elseif row.gangid then gangAccounts[row.gangid] = loadGangAccount(row.gangid) end
+        end
+        BankAccounts.ready = true
+    end)
+    if not ok then print(('[w_banking] Database initialization failed: %s'):format(tostring(err))) end
 end)
 
--- Bank counters shared with the clients (Config.BankLocations, editable through modifyBank).
-local banks = Config.BankLocations
-
--- Server-only: reached through the modifyBank export, never from a client.
-AddEventHandler('w_banking:server:modifyBank', function(bank, k, v)
-    if banks[tonumber(bank)] then
-        banks[tonumber(bank)][k] = v
-        TriggerClientEvent('w_banking:client:syncBanks', -1, banks)
-    end
-end)
-
-exports('modifyBank', function(bank, k, v)
-    TriggerEvent('w_banking:server:modifyBank', bank, k, v)
-end)
-
-exports('savings', function(cid)
-    if savingsAccounts[cid] then
-        return savingsAccounts[cid]
-    end
-end)
-
-exports('gang', function(gid)
-    if gangAccounts[gid] then
-        return gangAccounts[gid]
-    end
-end)
-
--- `source` is only set inside event handlers, so the caller passes the player id explicitly.
+local function modifyBank() return false,'Use the central bank charter controls' end
+AddEventHandler('w_banking:server:modifyBank', modifyBank)
+exports('modifyBank', modifyBank)
+exports('savings', function(cid) return savingsAccounts[cid] end)
+exports('gang', function(gid) return gangAccounts[gid] end)
 function getCharacterName(src)
-    local player = WCore.Functions.GetPlayer(src)
-    if not player then return nil end
-    return player.PlayerData.charinfo.firstname .. ' ' .. player.PlayerData.charinfo.lastname
+    local p = WCore.Functions.GetPlayer(src)
+    return p and (p.PlayerData.charinfo.firstname .. ' ' .. p.PlayerData.charinfo.lastname)
 end
-
-local function validAmount(amount)
-    local n = tonumber(amount)
-    return n ~= nil and n > 0 and n == math.floor(n)
+local function nearBank(src)
+    local ped = GetPlayerPed(src)
+    if not ped or ped == 0 then return false end
+    local pos = GetEntityCoords(ped)
+    if GetResourceState('w_centralbank')~='started' or not exports.w_centralbank:IsReady() then return false end
+    banks=exports.w_centralbank:GetBanks()
+    for _, bank in pairs(banks) do
+        local c = bank.coords
+        if #(pos - vector3(c.x,c.y,c.z)) <= Config.ServerDistance then return bank.id end
+    end
+    return false
 end
-
-w.callback.register('w_banking:getBankingInformation', function(source)
-    local src = source
-    local player = WCore.Functions.GetPlayer(src)
-    if not player then return nil end
-
-    local savings = savingsAccounts[player.PlayerData.citizenid]
-    local banking = {
-        ['name'] = player.PlayerData.charinfo.firstname .. ' ' .. player.PlayerData.charinfo.lastname,
-        ['bankbalance'] = '$' .. math.groupdigits(player.PlayerData.money['bank']),
-        ['cash'] = '$' .. math.groupdigits(player.PlayerData.money['cash']),
-        ['accountinfo'] = player.PlayerData.charinfo.account,
-        ['savings'] = savings and { amount = '$' .. math.groupdigits(savings.GetBalance() or 0) } or nil,
+local function failure(key) return { ok = false, key = key or 'msg.failed' } end
+local function information(src)
+    local p = WCore.Functions.GetPlayer(src)
+    if not p or not BankAccounts.ready or not nearBank(src) then return nil end
+    local d = p.PlayerData
+    local savings = savingsAccounts[d.citizenid]
+    return {
+        branch = nearBank(src), taxRate=exports.w_centralbank:TaxRate(nearBank(src)), closedEconomy=true, name = getCharacterName(src), accountinfo = tostring(d.charinfo.account or ''),
+        bankbalance = p.Functions.GetMoney('bank'), cash = p.Functions.GetMoney('cash'),
+        savings = savings and { amount = savings.GetBalance() } or nil,
+        history = MySQL.query.await('SELECT account, deposited, withdraw, balance, date, type FROM bank_statements WHERE citizenid = ? AND account IN (?, ?) ORDER BY record_id DESC LIMIT 30', { d.citizenid, 'Checking', 'Savings' }) or {},
     }
-    return banking
-end)
-
-RegisterServerEvent('w_banking:doQuickDeposit', function(amount)
-    local src = source
-    local player = WCore.Functions.GetPlayer(src)
-    if not player then return end
-    local currentCash = player.Functions.GetMoney('cash')
-
-    if not validAmount(amount) then return TriggerClientEvent('w_banking:transferError', src, 'msg.invalid_amount') end
-    if tonumber(amount) <= currentCash then
-        local cash = player.Functions.RemoveMoney('cash', tonumber(amount), 'banking-quick-depo')
-        local bank = player.Functions.AddMoney('bank', tonumber(amount), 'banking-quick-depo')
-
-        if not cash then return end
-        if not bank then return end
-
-        TriggerClientEvent('w_banking:openBankScreen', src)
-        TriggerClientEvent('w_banking:successAlert', src, 'msg.deposit_success', math.groupdigits(amount))
-        TriggerEvent('w_log:server:CreateLog', 'banking', 'Banking', 'lightgreen', "**"..GetPlayerName(player.PlayerData.source) .. " (citizenid: "..player.PlayerData.citizenid.." | id: "..player.PlayerData.source..")** made a cash deposit of $"..amount.." successfully.")
-    else
-        TriggerClientEvent('w_banking:transferError', src, 'msg.not_enough')
-    end
-end)
-
-RegisterServerEvent('w_banking:doQuickWithdraw', function(amount)
-    local src = source
-    local player = WCore.Functions.GetPlayer(src)
-    if not player then return end
-    local currentCash = player.Functions.GetMoney('bank')
-
-    if not validAmount(amount) then return TriggerClientEvent('w_banking:transferError', src, 'msg.invalid_amount') end
-    if tonumber(amount) <= currentCash then
-        local cash = player.Functions.RemoveMoney('bank', tonumber(amount), 'banking-quick-withdraw')
-        local bank = player.Functions.AddMoney('cash', tonumber(amount), 'banking-quick-withdraw')
-
-        if not bank then return end
-        if not cash then return end
-
-        TriggerClientEvent('w_banking:openBankScreen', src)
-        TriggerClientEvent('w_banking:successAlert', src, 'msg.withdraw_success', math.groupdigits(amount))
-        TriggerEvent('w_log:server:CreateLog', 'banking', 'Banking', 'red', "**"..GetPlayerName(player.PlayerData.source) .. " (citizenid: "..player.PlayerData.citizenid.." | id: "..player.PlayerData.source..")** made a cash withdrawal of $"..amount.." successfully.")
-    else
-        TriggerClientEvent('w_banking:transferError', src, 'msg.not_enough')
-    end
-end)
-
-RegisterServerEvent('w_banking:savingsDeposit', function(amount)
-    local src = source
-    local player = WCore.Functions.GetPlayer(src)
-    if not player then return end
-    local currentBank = player.Functions.GetMoney('bank')
-    local account = savingsAccounts[player.PlayerData.citizenid]
-
-    if not account then return TriggerClientEvent('w_banking:transferError', src, 'msg.no_savings') end
-    if not validAmount(amount) then return TriggerClientEvent('w_banking:transferError', src, 'msg.invalid_amount') end
-    if tonumber(amount) <= currentBank then
-        local bank = player.Functions.RemoveMoney('bank', tonumber(amount), 'banking-savings-deposit')
-        if not bank then return end
-        local savings = account.AddMoney(tonumber(amount), 'Bank to Savings Transfer')
-        if not savings then
-            player.Functions.AddMoney('bank', tonumber(amount), 'banking-savings-deposit-refund')
-            return
-        end
-
-        TriggerClientEvent('w_banking:openBankScreen', src)
-        TriggerClientEvent('w_banking:successAlert', src, 'msg.savings_deposit_success', math.groupdigits(amount))
-        TriggerEvent('w_log:server:CreateLog', 'banking', 'Banking', 'lightgreen', "**"..GetPlayerName(player.PlayerData.source) .. " (citizenid: "..player.PlayerData.citizenid.." | id: "..player.PlayerData.source..")** made a savings deposit of $"..tostring(amount).." successfully.")
-    else
-        TriggerClientEvent('w_banking:transferError', src, 'msg.not_enough')
-    end
-end)
-
-RegisterServerEvent('w_banking:savingsWithdraw', function(amount)
-    local src = source
-    local player = WCore.Functions.GetPlayer(src)
-    if not player then return end
-    local account = savingsAccounts[player.PlayerData.citizenid]
-
-    if not account then return TriggerClientEvent('w_banking:transferError', src, 'msg.no_savings') end
-    if not validAmount(amount) then return TriggerClientEvent('w_banking:transferError', src, 'msg.invalid_amount') end
-    if tonumber(amount) <= (account.GetBalance() or 0) then
-        local savings = account.RemoveMoney(tonumber(amount), 'Savings to Bank Transfer')
-        if not savings then return end
-        local bank = player.Functions.AddMoney('bank', tonumber(amount), 'banking-savings-withdraw')
-        if not bank then return end
-
-        TriggerClientEvent('w_banking:openBankScreen', src)
-        TriggerClientEvent('w_banking:successAlert', src, 'msg.savings_withdraw_success', math.groupdigits(amount))
-        TriggerEvent('w_log:server:CreateLog', 'banking', 'Banking', 'red', "**"..GetPlayerName(player.PlayerData.source) .. " (citizenid: "..player.PlayerData.citizenid.." | id: "..player.PlayerData.source..")** made a savings withdrawal of $"..tostring(amount).." successfully.")
-    else
-        TriggerClientEvent('w_banking:transferError', src, 'msg.not_enough')
-    end
-end)
-
-RegisterServerEvent('w_banking:createSavingsAccount', function()
-    local src = source
-    local player = WCore.Functions.GetPlayer(src)
-    if not player then return end
-    local success = createSavingsAccount(player.PlayerData.citizenid)
-
-    if not success then return TriggerClientEvent('w_banking:transferError', src, 'msg.savings_exists') end
-    TriggerClientEvent('w_banking:openBankScreen', src)
-    TriggerClientEvent('w_banking:successAlert', src, 'msg.savings_opened')
-    TriggerEvent('w_log:server:CreateLog', 'banking', 'Banking', "lightgreen", "**"..GetPlayerName(player.PlayerData.source) .. " (citizenid: "..player.PlayerData.citizenid.." | id: "..player.PlayerData.source..")** opened a savings account")
-end)
-
--- Notification in the player's own language: the client translates the key with its arguments.
-local function notify(src, key, style, ...)
-    TriggerClientEvent('w_banking:client:notify', src, key, style, ...)
 end
-
-w.addCommand('givecash', {
-    help = locale('cmd.givecash'),
-    params = {
-        -- untyped on purpose: the handler validates and answers the player in his language
-        { name = 'id', help = locale('cmd.givecash_id') },
-        { name = 'amount', help = locale('cmd.givecash_amount') }
-    }
-}, function(source, args)
-    local src = source
-    local id = tonumber(args.id)
-    local amount = tonumber(args.amount) and math.ceil(tonumber(args.amount)) or nil
-
-    if not id or not amount or amount <= 0 then return notify(src, 'notify.usage_givecash', 'error') end
-
-    local player = WCore.Functions.GetPlayer(src)
-    local otherPlayer = WCore.Functions.GetPlayer(id)
-
-    if player and otherPlayer and id ~= src then
-        if player.PlayerData.metadata.isdead then return notify(src, 'notify.dead', 'error') end
-
-        local distance = player.PlayerData.metadata.inlaststand and 3.0 or 10.0
-        if #(GetEntityCoords(GetPlayerPed(src)) - GetEntityCoords(GetPlayerPed(id))) > distance then return notify(src, 'notify.too_far', 'error') end
-
-        if not player.Functions.RemoveMoney('cash', amount) then return notify(src, 'notify.not_enough_cash', 'error') end
-        if not otherPlayer.Functions.AddMoney('cash', amount) then
-            player.Functions.AddMoney('cash', amount)
-            return notify(src, 'notify.give_failed', 'error')
-        end
-
-        notify(src, 'notify.gave_cash', 'success', math.groupdigits(amount), id)
-        notify(id, 'notify.received_cash', 'success', math.groupdigits(amount), src)
-    else
-        notify(src, 'notify.wrong_id', 'error')
-    end
-end)
-
--- Transfer between bank accounts (account number = charinfo.account of the receiving character).
-local function findAccountOwner(accountNumber)
-    return exports.w_lib:FwFindBankAccount(accountNumber)
+w.callback.register('w_banking:getBankingInformation', information)
+local function statementKey(data,cid,kind)
+    local key=type(data)=='table' and data.requestKey
+    if type(key)~='string' or #key<8 or #key>80 then return nil end
+    return cid..':'..tostring(kind):sub(1,40)..':'..key
 end
-
-RegisterServerEvent('w_banking:initiateTransfer', function(data)
-    local src = source
-    local player = WCore.Functions.GetPlayer(src)
-    if not player then return end
-
-    local amount = type(data) == 'table' and tonumber(data.amount) or nil
-    local accountNumber = type(data) == 'table' and data.account and tostring(data.account):gsub('%s', '') or nil
-    if not amount or amount <= 0 or not accountNumber or accountNumber == '' then
-        return TriggerClientEvent('w_banking:transferError', src, 'msg.transfer_invalid')
+local function record(p, amount, withdrawal, note, data)
+    BankAccounts.statement(p.PlayerData.citizenid, 'Checking', withdrawal and 0 or amount, withdrawal and amount or 0, p.Functions.GetMoney('bank'), note,nil,statementKey(data,p.PlayerData.citizenid,'Checking-'..note:sub(1,25)))
+end
+local function withTax(p,amount)
+    local rate=exports.w_centralbank:TaxRate(nearBank(p.PlayerData.source)) or 0
+    return amount+math.floor(amount*rate+0.5)/100
+end
+local function transfer(p,from,to,amount,reason,data)
+    local branch=nearBank(p.PlayerData.source)
+    if not branch then return false end
+    local key=type(data)=='table' and data.requestKey
+    if type(key)~='string' or #key<8 or #key>80 then key=nil end
+    if key then key='bank:'..p.PlayerData.citizenid..':'..reason..':'..key end
+    return exports.w_centralbank:BankTransfer(p.PlayerData.source,branch,from,to,amount,reason,key)
+end
+local function move(p,from,to,amount,reason,data)
+    local prefix='player:'..p.PlayerData.citizenid..':'
+    return transfer(p,prefix..from,prefix..to,amount,reason,data)
+end
+local actions = {}
+actions.doDeposit = function(p, data)
+    local amount = BankAccounts.validAmount(data.amount)
+    if not amount then return failure('msg.invalid_amount') end
+    if not move(p, 'cash', 'bank', amount, 'bank-deposit', data) then return failure('msg.not_enough') end
+    record(p, amount, false, 'Cash deposit',data)
+    return { ok=true, key='msg.deposit_success', args={amount} }
+end
+actions.doWithdraw = function(p, data)
+    local amount = BankAccounts.validAmount(data.amount)
+    if not amount then return failure('msg.invalid_amount') end
+    if not move(p, 'bank', 'cash', amount, 'bank-withdraw', data) then return failure('msg.not_enough') end
+    record(p, withTax(p,amount), true, 'Cash withdrawal',data)
+    return { ok=true, key='msg.withdraw_success', args={amount} }
+end
+actions.createSavingsAccount = function(p)
+    if not createSavingsAccount(p.PlayerData.citizenid) then return failure('msg.savings_exists') end
+    return { ok=true, key='msg.savings_opened' }
+end
+actions.savingsDeposit = function(p, data)
+    local amount, account = BankAccounts.validAmount(data.amount), savingsAccounts[p.PlayerData.citizenid]
+    if not amount then return failure('msg.invalid_amount') end
+    if not account then return failure('msg.no_savings') end
+    if not transfer(p,'player:'..p.PlayerData.citizenid..':bank',account.accountId,amount,'savings-deposit',data) then return failure('msg.not_enough') end
+    record(p, withTax(p,amount), true, 'To savings',data)
+    BankAccounts.statement(p.PlayerData.citizenid,'Savings',amount,0,account.GetBalance(),'Bank to savings',nil,statementKey(data,p.PlayerData.citizenid,'Savings'))
+    return { ok=true, key='msg.savings_deposit_success', args={amount} }
+end
+actions.savingsWithdraw = function(p, data)
+    local amount, account = BankAccounts.validAmount(data.amount), savingsAccounts[p.PlayerData.citizenid]
+    if not amount then return failure('msg.invalid_amount') end
+    if not account then return failure('msg.no_savings') end
+    if not transfer(p,account.accountId,'player:'..p.PlayerData.citizenid..':bank',amount,'savings-withdraw',data) then return failure('msg.not_enough') end
+    record(p, amount, false, 'From savings',data)
+    BankAccounts.statement(p.PlayerData.citizenid,'Savings',0,withTax(p,amount),account.GetBalance(),'Savings to bank',nil,statementKey(data,p.PlayerData.citizenid,'Savings'))
+    return { ok=true, key='msg.savings_withdraw_success', args={amount} }
+end
+actions.doTransfer = function(p, data)
+    local amount = BankAccounts.validAmount(data.amount)
+    local number = type(data.account)=='string' and data.account:gsub('%s','') or ''
+    if not amount or number=='' or #number>64 then return failure('msg.transfer_invalid') end
+    if number == tostring(p.PlayerData.charinfo.account) then return failure('msg.transfer_self') end
+    local receiver, offline = exports.w_lib:FwFindBankAccount(number)
+    if not receiver then return failure('msg.transfer_no_account') end
+    -- Recheck after the lookup yields, in case the character connected meanwhile.
+    if offline and WCore.Functions.GetPlayerByCitizenId then
+        local online = WCore.Functions.GetPlayerByCitizenId(receiver.PlayerData.citizenid)
+        if online then receiver, offline = online, false end
     end
-    amount = math.floor(amount)
-
-    if accountNumber == player.PlayerData.charinfo.account then
-        return TriggerClientEvent('w_banking:transferError', src, 'msg.transfer_self')
+    local to='player:'..receiver.PlayerData.citizenid..':bank'
+    if not exports.w_centralbank:EnsureAccount(to,receiver.PlayerData.citizenid,'player') then return failure() end
+    if not transfer(p,'player:'..p.PlayerData.citizenid..':bank',to,amount,'bank-transfer',data) then return failure('msg.not_enough') end
+    record(p, withTax(p,amount), true, 'Transfer to ' .. number,data)
+    local receivedBalance = exports.w_centralbank:GetBalance(to)
+    BankAccounts.statement(receiver.PlayerData.citizenid, 'Checking', amount, 0, receivedBalance, 'Transfer from ' .. tostring(p.PlayerData.charinfo.account),nil,statementKey(data,receiver.PlayerData.citizenid,'Received-'..p.PlayerData.citizenid))
+    if not offline then TriggerClientEvent('w_banking:client:notify', receiver.PlayerData.source, 'msg.transfer_received', 'success', amount, getCharacterName(p.PlayerData.source)) end
+    return { ok=true, key='msg.transfer_success', args={amount,number} }
+end
+local function transact(src, action, data)
+    if not BankAccounts.ready then return failure('msg.unavailable') end
+    local p = WCore.Functions.GetPlayer(src)
+    if not p or not nearBank(src) or p.PlayerData.metadata.isdead then return failure('msg.near_bank') end
+    if not actions[action] or type(data)~='table' then return failure('msg.invalid_amount') end
+    local cid, now = p.PlayerData.citizenid, GetGameTimer()
+    if busy[cid] or (lastAction[cid] and now-lastAction[cid]<500) then return failure('msg.busy') end
+    busy[cid], lastAction[cid] = true, now
+    local ok, result = pcall(actions[action], p, data)
+    busy[cid] = nil
+    if not ok then print(('[w_banking] Transaction failed: %s'):format(tostring(result))) return failure() end
+    if result.ok then
+        local fresh, info = pcall(information, src)
+        if fresh then result.information = info end
     end
-    if amount > player.Functions.GetMoney('bank') then
-        return TriggerClientEvent('w_banking:transferError', src, 'msg.not_enough')
-    end
-
-    local receiver, offline = findAccountOwner(accountNumber)
-    if not receiver then
-        return TriggerClientEvent('w_banking:transferError', src, 'msg.transfer_no_account')
-    end
-
-    if not player.Functions.RemoveMoney('bank', amount, 'banking-transfer-out') then
-        return TriggerClientEvent('w_banking:transferError', src, 'msg.not_enough')
-    end
-    if not receiver.Functions.AddMoney('bank', amount, 'banking-transfer-in') then
-        player.Functions.AddMoney('bank', amount, 'banking-transfer-refund')
-        return TriggerClientEvent('w_banking:transferError', src, 'msg.transfer_no_account')
-    end
-    if offline then receiver.Functions.Save() end
-
-    local senderName = getCharacterName(src)
-    TriggerClientEvent('w_banking:openBankScreen', src)
-    TriggerClientEvent('w_banking:successAlert', src, 'msg.transfer_success', math.groupdigits(amount), accountNumber)
-    if not offline then
-        notify(receiver.PlayerData.source, 'msg.transfer_received', 'success', math.groupdigits(amount), senderName)
-    end
-    TriggerEvent('w_log:server:CreateLog', 'banking', 'Banking', 'lightgreen', "**"..GetPlayerName(src) .. " (citizenid: "..player.PlayerData.citizenid.." | id: "..src..")** transferred $"..amount.." to account "..accountNumber.." ("..receiver.PlayerData.citizenid..")")
+    return result
+end
+w.callback.register('w_banking:transaction', transact)
+-- Existing integrations keep their event names and receive authoritative replies.
+for event, action in pairs({
+    doQuickDeposit='doDeposit', doQuickWithdraw='doWithdraw', savingsDeposit='savingsDeposit',
+    savingsWithdraw='savingsWithdraw', createSavingsAccount='createSavingsAccount', initiateTransfer='doTransfer',
+}) do
+    RegisterNetEvent('w_banking:' .. event, function(value)
+        local src = source
+        local result = transact(src, action, type(value)=='table' and value or {amount=value})
+        TriggerClientEvent(result.ok and 'w_banking:successAlert' or 'w_banking:transferError', src, result.key, table.unpack(result.args or {}))
+        if result.ok then TriggerClientEvent('w_banking:openBankScreen', src) end
+    end)
+end
+w.addCommand('givecash', {help=locale('cmd.givecash'), params={{name='id',help=locale('cmd.givecash_id')},{name='amount',help=locale('cmd.givecash_amount')}}}, function(src,args)
+    local id, amount = tonumber(args.id), BankAccounts.validAmount(args.amount)
+    local function notify(key,style,...) TriggerClientEvent('w_banking:client:notify',src,key,style,...) end
+    if not id or not amount then return notify('notify.usage_givecash','error') end
+    local p, other = WCore.Functions.GetPlayer(src), WCore.Functions.GetPlayer(id)
+    if not p or not other or id==src then return notify('notify.wrong_id','error') end
+    if p.PlayerData.metadata.isdead then return notify('notify.dead','error') end
+    if GetPlayerRoutingBucket(src)~=GetPlayerRoutingBucket(id) or #(GetEntityCoords(GetPlayerPed(src))-GetEntityCoords(GetPlayerPed(id))) > (p.PlayerData.metadata.inlaststand and 3 or 10) then return notify('notify.too_far','error') end
+    if not exports.w_centralbank:Transfer('player:'..p.PlayerData.citizenid..':cash','player:'..other.PlayerData.citizenid..':cash',amount,'givecash') then return notify('notify.not_enough_cash','error') end
+    notify('notify.gave_cash','success',amount,id)
+    TriggerClientEvent('w_banking:client:notify',id,'notify.received_cash','success',amount,src)
 end)
+
+w.callback.register('w_banking:branches',function() return GetResourceState('w_centralbank')=='started' and exports.w_centralbank:GetBanks() or {} end)

@@ -1,4 +1,6 @@
 Config = {}
+Config.MaxTransaction = 1000000000
+Config.ServerDistance = 8.0
 
 -- Bank counters. `name` is the internal id; `label` is the dictionary key
 -- (locales/{ar,en}.json) used for the prompt text and the map blip.

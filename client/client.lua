@@ -1,4 +1,5 @@
-local banks
+local banks = Config.BankLocations
+local CreateBanks
 local BankPed = {}
 local BankBlips = {}
 local BankPrompts = {}          -- bank index → library prompt record
@@ -50,8 +51,8 @@ local function createCounterPrompt(bank, label)
 end
 
 local function buildInteractions()
-    for bank, v in pairs(Config.BankLocations) do
-        local label = locale(v.label)
+    for bank, v in pairs(banks) do
+        local label = (v.label:sub(1,5)=='bank.' and locale(v.label) or v.label)
         if BankPed[bank] and not BankPrompts[bank] then
             BankPrompts[bank] = createCounterPrompt(bank, label)
         end
@@ -64,18 +65,18 @@ end
 -- Language switch: relabel the prompts and the blips in place.
 local function relabelInteractions()
     for bank, rec in pairs(BankPrompts) do
-        rec.setTitle(locale(Config.BankLocations[bank].label))
+        rec.setTitle((banks[bank].label:sub(1,5)=='bank.' and locale(banks[bank].label) or banks[bank].label))
         rec.setLabel(Config.Prompt.key, locale('prompt.open'))
     end
     for bank, blip in pairs(BankBlips) do
-        w.blip.setName(blip, locale(Config.BankLocations[bank].label))
+        w.blip.setName(blip, (banks[bank].label:sub(1,5)=='bank.' and locale(banks[bank].label) or banks[bank].label))
     end
 end
 
 -- Remove Peds / Blips / Prompts --
 local function BankCleanup()
     clearInteractions()
-    for bank in pairs(Config.BankLocations) do
+    for bank in pairs(banks) do
         if BankPed[bank] ~= nil then
             w.entity.delete(BankPed[bank])
             BankPed[bank] = nil
@@ -102,12 +103,12 @@ end
 
 -- Open Bank UI -- InBank is raised before the server round trip so a second prompt
 -- completion (or event) during the wait cannot open the page twice.
-function openAccountScreen()
-    if InBank then return end
+function openAccountScreen(refresh)
+    if InBank and not refresh then return end
     InBank = true
 
-    local banking = w.callback.triggerServer('w_banking:getBankingInformation')
-    if not banking then
+    local ok, banking = pcall(w.callback.triggerServer, 'w_banking:getBankingInformation')
+    if not ok or not banking then
         InBank = false
         return
     end
@@ -122,8 +123,8 @@ end
 exports('openAccountScreen', openAccountScreen)
 
 -- Threads / Startup --
-local function CreateBanks()
-    for bank, v in pairs(Config.BankLocations) do
+CreateBanks = function()
+    for bank, v in pairs(banks) do
         if BankPed[bank] == nil then BankPed[bank] = spawnClerk(Config.ClerkModel, v.coords) end
     end
     buildInteractions()
@@ -147,11 +148,13 @@ end)
 
 -- Events --
 RegisterNetEvent('w_banking:openBankScreen', function()
-    openAccountScreen()
+    if InBank then openAccountScreen(true) end
 end)
 
 RegisterNetEvent('w_banking:client:syncBanks', function(data)
+    BankCleanup()
     banks = data
+    CreateBanks()
 end)
 
 exports('getBanks', function() return banks or Config.BankLocations end)
@@ -178,4 +181,14 @@ end)
 AddEventHandler('WCore:Client:OnPlayerLoaded', function() CreateBanks() end)
 AddEventHandler('WCore:Client:OnPlayerUnload', function() BankCleanup() end) -- unload, not loaded: cleanup was running right after CreateBanks
 AddEventHandler('onResourceStart', function(resource) if resource ~= GetCurrentResourceName() then return end CreateBanks() end)
-w.stopped(BankCleanup)
+w.stopped(function() BankCleanup(); if CloseBank then CloseBank() end end)
+
+RegisterNetEvent('w_centralbank:branches',function(data)
+    if type(data)~='table' then return end
+    BankCleanup();banks=data;CreateBanks()
+end)
+CreateThread(function()
+    Wait(1500)
+    local ok,data=pcall(w.callback.triggerServer,'w_banking:branches')
+    if ok and type(data)=='table' and #data>0 then BankCleanup();banks=data;CreateBanks() end
+end)

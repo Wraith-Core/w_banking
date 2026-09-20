@@ -1,0 +1,58 @@
+/* Height-scaled 1080p layout; ultrawide placement remains viewport-based. */
+:root{--w-ui-px:clamp(1px,.0925925926vh,2px)}
+/* Layout adapter for the original w_store skin; shared artwork loads last. */
+body.wst-root{font-size:clamp(calc(13 * var(--w-ui-px)),1.6vh,calc(17 * var(--w-ui-px)));font-family:var(--wst-f-body);color:var(--wst-text)}
+html[lang=ar] body.wst-root{font-family:var(--wst-f-ar);font-weight:500}
+.wst-root h2,.wst-root h3,.wst-root .brand{font-family:var(--wst-f-display)}
+html[lang=ar] .wst-root :is(h2,h3){font-family:var(--wst-f-ar);font-weight:700}
+.wst-root .brand{color:#fff}.wst-root .brand :is(span,small){color:var(--wst-text-dim);font-family:var(--wst-f-body)}
+.wst-root :is(.muted,.intro,small){color:var(--wst-text-dim)}
+.wst-root :is(button,input,select){border-radius:0;filter:none}
+.wst-root input[type=checkbox]{accent-color:var(--wst-accent)}
+.wst-root .wst-title{font-size:clamp(calc(22 * var(--w-ui-px)),2.8vh,calc(32 * var(--w-ui-px)))}
+.wst-root .wst-header{padding-block:calc(12 * var(--w-ui-px));min-height:calc(64 * var(--w-ui-px))}
+.wst-root .wst-header>div:first-child{flex:1}
+.wst-root .wst-header small{color:var(--wst-text-dim);font-family:var(--wst-f-body)}
+.wst-root .wst-rule{flex:none;width:70%;margin:calc(8 * var(--w-ui-px)) auto calc(12 * var(--w-ui-px))}
+.wst-root .store-footer{position:relative;background:rgba(0,0,0,.35);border:0;color:var(--wst-text-dim)}
+.store-footer::before{content:'';position:absolute;inset:0 0 auto;height:calc(2 * var(--w-ui-px));background:rgba(255,255,255,.18);pointer-events:none;mask:var(--wst-tex-divider_line) center/100% 100% no-repeat}
+.wst-root :is(.seal,.emblem){border:0;outline:0;border-radius:0;color:var(--wst-accent);font-family:var(--wst-f-num)}
+.wst-root :is(.badge,.tag){color:var(--wst-text-dim);border-color:var(--wst-line);background:transparent}
+.wst-root :is(.empty,.section,.account-number){border-color:var(--wst-line);color:var(--wst-text-dim)}
+.wst-root :is(.field,label){color:var(--wst-text-dim)}
+.wst-root .wst-card :is(h2,h3){color:inherit;text-shadow:none}
+.wst-root .wst-card:is(:hover,.selected,.active,.is-selected) :is(.muted,.intro,.motif,.tag,.price,.need div,.ws-row-meta,.ws-row-sub){color:inherit!important}
+.wst-root .wst-card:disabled{opacity:.55}
+.wst-root .wst-plate{border:0}
+.store-input-wrap{display:block;min-width:0}
+.store-positioned{position:relative}
+.store-input-wrap[hidden]{display:none!important}
+.wst-root .store-input-wrap>.wst-input{display:block;margin:0;width:100%;box-sizing:border-box}
+.store-symbol{font-family:Arial,sans-serif!important;line-height:1}
+.wst-root dialog .store-input-wrap{margin-block:calc(12 * var(--w-ui-px))}
+.wst-root :is(dialog,.confirm-box,.ws-modal-box) .wst-header{min-height:0;padding:calc(12 * var(--w-ui-px))}
+.wst-root dialog{font-family:inherit;overflow:visible;max-height:88vh}
+.wst-root dialog>form{max-height:calc(88vh - calc(60 * var(--w-ui-px)));overflow:auto}
+.wst-root dialog::backdrop{background:rgba(0,0,0,.62)}
+.wst-root dialog :is(h2,p){overflow-wrap:anywhere}
+.wst-root :is(#notice,.notice){background:#1a1a1a;border:calc(1 * var(--w-ui-px)) solid var(--wst-line);color:var(--wst-text)}
+.wst-root :is(#notice.error,.notice:not(.success)){background:var(--wst-red-soft);border-color:rgba(203,1,1,.3)}
+.wst-root :is(#notice:not(.error),.notice.success){background:#1a1a1a;border-color:var(--wst-line)}
+.wst-root table th{background:#171717;color:var(--wst-text-dim)}
+.wst-root table :is(td,th){border-color:var(--wst-line)}
+.wst-root :is(td.negative,#formError){color:#e74c3c}.wst-root td.positive{color:#34b895}
+@media(max-height:800px){.wst-root .wst-header{min-height:calc(52 * var(--w-ui-px));padding-block:calc(7 * var(--w-ui-px))}.wst-root .wst-title{font-size:clamp(calc(22 * var(--w-ui-px)),2.8vh,calc(28 * var(--w-ui-px)))}}
+#bank.wst-panel::before{width:auto;height:auto}#bank::after{display:none}
+.sidebar{background:rgba(0,0,0,.35);border-color:var(--wst-line)}.side-note{white-space:pre-line}
+.balance{padding-inline:calc(14 * var(--w-ui-px))!important}.balances{border:0;gap:calc(8 * var(--w-ui-px))}.balance strong{color:#fff}
+.quick button{min-height:calc(112 * var(--w-ui-px))}.quick span{color:var(--wst-text-dim)}
+.content>header>div:first-child{padding-inline:calc(80 * var(--w-ui-px))}.header-actions{position:absolute;inset-inline-end:calc(8 * var(--w-ui-px));top:50%;transform:translateY(-50%)}
+#central{margin-top:calc(12 * var(--w-ui-px));padding:calc(11 * var(--w-ui-px)) calc(14 * var(--w-ui-px))}.account-number{color:var(--wst-text-dim)}
+@media(max-width:720px){.content>header>div:first-child{padding-inline:0 calc(84 * var(--w-ui-px))}.balance{padding-inline:calc(9 * var(--w-ui-px))!important}.quick button{min-height:calc(96 * var(--w-ui-px))}}
+
+/* Keep the shared decoration and native checkbox proportional to local text. */
+.wst-root .wst-frame{--wst-frame-px:clamp(calc(10 * var(--w-ui-px)),1.3vh,calc(16 * var(--w-ui-px)))}
+.wst-root .wst-rule{height:calc(4 * var(--w-ui-px))}
+.wst-root .wst-check{gap:calc(8 * var(--w-ui-px))!important;font-size:clamp(calc(13 * var(--w-ui-px)),1.6vh,calc(17 * var(--w-ui-px)))}
+.wst-root .wst-check input[type=checkbox]{width:calc(18 * var(--w-ui-px))!important;height:calc(18 * var(--w-ui-px))!important;min-width:calc(18 * var(--w-ui-px));min-height:calc(18 * var(--w-ui-px));border-width:calc(2 * var(--w-ui-px))!important}
+.wst-root .wst-check input[type=checkbox]:checked::after{width:calc(8 * var(--w-ui-px));height:calc(8 * var(--w-ui-px))}

@@ -39,7 +39,11 @@
     "transfer_received": "You received a transfer of $%s from %s.",
     "transfer_invalid": "Enter a valid account number and amount.",
     "transfer_self": "You cannot transfer money to your own account.",
-    "transfer_no_account": "No account with that number was found."
+    "transfer_no_account": "No account with that number was found.",
+    "failed": "The transaction could not be completed. Refresh your balance and retry.",
+    "unavailable": "Banking is temporarily unavailable.",
+    "near_bank": "Approach a bank counter to use your account.",
+    "busy": "Wait for the current transaction to finish."
   },
   "ui": {
     "title": "Banking",
