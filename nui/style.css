@@ -26,7 +26,7 @@ button:focus-visible,input:focus-visible{outline:none}
 #bank{position:absolute;inset:5vh 6vw;max-width:calc(1280 * var(--w-ui-px));margin:auto;display:grid;grid-template-columns:calc(252 * var(--w-ui-px)) minmax(0,1fr);overflow:hidden}
 
 /* ── The side: wordmark, the holder, the services ── */
-.sidebar{position:relative;display:flex;flex-direction:column;min-height:0;padding:calc(30 * var(--w-ui-px)) calc(22 * var(--w-ui-px)) calc(22 * var(--w-ui-px));background:linear-gradient(180deg,rgba(11,10,8,.55),rgba(11,10,8,.3));border-inline-end:1px solid var(--w-rule)}
+.sidebar{position:relative;display:flex;flex-direction:column;min-height:0;padding:calc(30 * var(--w-ui-px)) calc(22 * var(--w-ui-px)) calc(22 * var(--w-ui-px));background:linear-gradient(180deg,rgba(10,10,10,.55),rgba(10,10,10,.3));border-inline-end:1px solid var(--w-rule)}
 .brand{font-family:var(--w-f-display);font-size:calc(34 * var(--w-ui-px));line-height:1;letter-spacing:.08em;text-align:center;color:var(--w-paper)}
 .brand span{display:block;margin-top:calc(9 * var(--w-ui-px));font-family:var(--w-f-label);font-size:calc(10.5 * var(--w-ui-px));line-height:1.3;letter-spacing:.24em;color:var(--w-paper-dim)}
 /* no emblems: the monogram seal is not drawn */
@@ -115,7 +115,7 @@ td.desc{white-space:normal;min-width:calc(130 * var(--w-ui-px))}
 
 /* ── The review: the paper note (store-skin.css draws the paper) ── */
 dialog{width:min(calc(540 * var(--w-ui-px)),92vw);padding:0;border:0;font:inherit}
-dialog::backdrop{background:rgba(6,5,4,.72)} /* --w-scrim: custom properties do not reach ::backdrop in the game's Chromium */
+dialog::backdrop{background:rgba(5,5,5,.72)} /* --w-scrim: custom properties do not reach ::backdrop in the game's Chromium */
 dialog form{padding:calc(34 * var(--w-ui-px)) calc(36 * var(--w-ui-px)) calc(26 * var(--w-ui-px));text-align:center}
 dialog small{color:var(--w-note-dim)}
 dialog h2{margin-top:calc(8 * var(--w-ui-px))}
