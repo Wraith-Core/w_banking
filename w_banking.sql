@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS `bank_accounts` (
   PRIMARY KEY (`record_id`),
   UNIQUE KEY `citizenid` (`citizenid`),
   KEY `gangid` (`gangid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE IF NOT EXISTS `bank_statements` (
   `record_id` bigint(255) NOT NULL AUTO_INCREMENT,
@@ -26,4 +26,4 @@ CREATE TABLE IF NOT EXISTS `bank_statements` (
   UNIQUE KEY `cb_request_key` (`request_key`),
   KEY `citizenid` (`citizenid`),
   KEY `gangid` (`gangid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

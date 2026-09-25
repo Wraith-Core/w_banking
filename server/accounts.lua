@@ -81,3 +81,12 @@ AddEventHandler('w_centralbank:balanceChanged',function(account,balance)
     local id=account:match('^banklegacy:(%d+)$')
     if id then MySQL.update('UPDATE bank_accounts SET amount=? WHERE record_id=?',{balance,tonumber(id)}) end
 end)
+
+-- w_core moved a character to another citizen id (w_core/server/citizen.lua) after renaming
+-- bank_accounts.citizenid. Rebuild the savings entry under the new id instead of moving it:
+-- the old object's closures still carry the old owner (statements, EnsureAccount owner).
+AddEventHandler('w_core:server:citizenIdChanged',function(old,new)
+    old,new=tostring(old),tostring(new)
+    savingsAccounts[old]=nil
+    CreateThread(function() savingsAccounts[new]=BankAccounts.load(new,'Savings') end)
+end)

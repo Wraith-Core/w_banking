@@ -3,10 +3,10 @@
 
 ## Features
 - Withdraw / Deposit at the bank counters (Valentine, Rhodes, Saint Denis, Blackwater)
-- Transfer funds to another character's account number
+- Transfer funds to another character's account number or citizen ID (online or offline)
 - Savings account per character
 - Gang account (server exports `createGangAccount` / `gang`)
-- `/givecash [id] [amount]` to hand cash to a nearby player
+- `/givecash [citizen id] [amount]` to hand cash to a nearby player (`#5` names whoever is on server id 5)
 
 ## Dependencies
 - w_lib (shared bootstrap `@w_lib/init.lua`: callbacks, commands, locale, blips, entity creation)

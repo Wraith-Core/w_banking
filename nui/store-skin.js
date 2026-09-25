@@ -5,11 +5,12 @@
     "wst-panel": "#bank,dialog",
     "wst-header": ".content>header,dialog h2",
     "wst-title": "h1,dialog h2",
-    "wst-sub": "#eyebrow,.muted,.side-note,.balance>small,.balance>span",
-    "wst-num": ".balance strong,.account-number b,#workspace [dir=ltr]",
+    // Reading text, labels, the accounts strip and the summary card carry their own theme roles in
+    // style.css / store-skin.css (no wst-sub, no wst-plate). Big figures only are wst-num: the account
+    // number and the statement's figures are EB Garamond, lining and tabular.
+    "wst-num": ".balance strong",
     "wst-tab": "nav button",
     "wst-card": ".quick button",
-    "wst-plate": ".balance,.form-layout>aside,.seal",
     "wst-input": "input,select",
     "wst-close": "#close",
     "store-footer": ".content>footer"
