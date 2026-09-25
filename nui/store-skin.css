@@ -64,7 +64,7 @@ body.wst-root{font-size:clamp(calc(13 * var(--w-ui-px)),1.6vh,calc(17 * var(--w-
 .wst-root dialog>form{max-height:calc(88vh - calc(60 * var(--w-ui-px)));overflow:auto}
 .wst-root dialog h2,.wst-root dialog p{overflow-wrap:anywhere}
 .wst-root dialog.wst-panel{background:transparent!important;box-shadow:none!important;color:var(--w-note-ink)!important;filter:drop-shadow(0 calc(14 * var(--w-ui-px)) calc(26 * var(--w-ui-px)) rgba(0,0,0,.6))}
-.wst-root dialog.wst-panel::before{inset:0!important;background:linear-gradient(rgba(227,217,196,.55),rgba(227,217,196,.55)),var(--w-tex-grain) 0 0/256px 256px,var(--w-note)!important;box-shadow:inset 0 0 calc(46 * var(--w-ui-px)) rgba(90,70,40,.3)!important;-webkit-mask:none!important;mask:none!important;-webkit-mask-box-image:var(--w-tex-tear) 64 fill / calc(24 * var(--w-ui-px)) round}
+.wst-root dialog.wst-panel::before{inset:0!important;background:linear-gradient(rgba(227,217,196,.55),rgba(227,217,196,.55)),var(--w-tex-grain) 0 0/256px 256px,var(--w-note)!important;box-shadow:inset 0 0 calc(46 * var(--w-ui-px)) var(--w-note-glow)!important;-webkit-mask:none!important;mask:none!important;-webkit-mask-box-image:var(--w-tex-tear) 64 fill / calc(24 * var(--w-ui-px)) round}
 .wst-root dialog.wst-panel>.wst-frame{display:none!important}
 .wst-root dialog .wst-header{min-height:0;padding:calc(10 * var(--w-ui-px)) calc(12 * var(--w-ui-px));color:var(--w-note-ink)!important}
 .wst-root dialog .wst-header::before{background:rgba(28,23,18,.09)!important}
