@@ -122,13 +122,40 @@ function openAccountScreen(refresh)
 end
 exports('openAccountScreen', openAccountScreen)
 
+-- A bank whose teller is held up (w_heists 1.1.0): the heist's own networked teller stands in his place, in his
+-- model, so ours and the counter prompt go until the run is over (GlobalState['w_heists:robbed'].banks[<branch id>]).
+local function robbed(v)
+    local r = GlobalState['w_heists:robbed']
+    return type(v) == 'table' and v.id ~= nil and type(r) == 'table' and type(r.banks) == 'table' and r.banks[tostring(v.id)] == true
+end
+
 -- Threads / Startup --
 CreateBanks = function()
     for bank, v in pairs(banks) do
-        if BankPed[bank] == nil then BankPed[bank] = spawnClerk(Config.ClerkModel, v.coords) end
+        if BankPed[bank] == nil and not robbed(v) then BankPed[bank] = spawnClerk(Config.ClerkModel, v.coords) end
     end
     buildInteractions()
 end
+
+local wasRobbed = {}            -- branch id → true while held up
+CreateThread(function()
+    while true do
+        Wait(1000)
+        local over = false
+        for bank, v in pairs(banks or {}) do
+            local id = type(v) == 'table' and v.id ~= nil and tostring(v.id) or nil
+            if id and robbed(v) then
+                wasRobbed[id] = true
+                if BankPrompts[bank] then BankPrompts[bank].remove() BankPrompts[bank] = nil end
+                if BankPed[bank] then w.entity.delete(BankPed[bank]) BankPed[bank] = nil end
+            elseif id and wasRobbed[id] then
+                wasRobbed[id] = nil
+                over = true
+            end
+        end
+        if over then CreateBanks() end
+    end
+end)
 
 CreateThread(function()
     for _, v in pairs(Config.BankDoors) do

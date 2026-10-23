@@ -7,6 +7,9 @@
 - Savings account per character
 - Gang account (server exports `createGangAccount` / `gang`)
 - `/givecash [citizen id] [amount]` to hand cash to a nearby player (`#5` names whoever is on server id 5)
+- 2.0.1: a bank robbery linked to a branch (w_heists 1.1.0) — while it runs, our teller and the counter prompt of that
+  branch are gone and the heist's own teller (same model, same spot) stands there and raises his hands; they come back
+  when the run is over (`GlobalState['w_heists:robbed'].banks[<branch id>]`)
 
 ## Dependencies
 - w_lib (shared bootstrap `@w_lib/init.lua`: callbacks, commands, locale, blips, entity creation)
