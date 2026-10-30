@@ -3,7 +3,10 @@ BankAccounts = { ready = false, locks = {} }
 savingsAccounts, gangAccounts = {}, {}
 function BankAccounts.validAmount(value)
     local n = tonumber(value)
-    return n and n == n and n > 0 and n <= (Config.MaxTransaction or 1000000000) and n == math.floor(n) and n or nil
+    if not n or n ~= n or n <= 0 or n > (Config.MaxTransaction or 1000000000) then return nil end
+    local cents = math.floor(n * 100 + 0.5)
+    if math.abs(n * 100 - cents) > 0.000001 or cents < 1 then return nil end
+    return cents / 100
 end
 
 function BankAccounts.statement(cid, kind, deposited, withdrawn, balance, description, gid, requestKey)

@@ -12,7 +12,7 @@ local function nuiLocalePayload()
     if key ~= 'ar' then key = 'en' end
     local strings = {}
     for k, v in pairs(w.getLocales()) do
-        if k:sub(1, 3) == 'ui.' then strings[k] = v end
+        if k:sub(1, 3) == 'ui.' or k:sub(1, 4) == 'nui.' then strings[k] = v end
     end
     return { locale = key, dir = (key == 'ar') and 'rtl' or 'ltr', strings = strings }
 end
