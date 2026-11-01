@@ -40,7 +40,7 @@ local function nearBank(src)
     end
     return false
 end
-local function failure(key) return { ok = false, key = key or 'msg.failed' } end
+local function failure(key, args) return { ok = false, key = key or 'msg.failed', args = args } end
 local function information(src)
     local p = WCore.Functions.GetPlayer(src)
     if not p or not BankAccounts.ready or not nearBank(src) then return nil end
@@ -72,7 +72,7 @@ local function withTax(p,amount)
 end
 local function transfer(p,from,to,amount,reason,data)
     local branch=nearBank(p.PlayerData.source)
-    if not branch then return false end
+    if not branch then return false,'near_bank' end
     local key=type(data)=='table' and data.requestKey
     if type(key)~='string' or #key<8 or #key>80 then key=nil end
     if key then key='bank:'..p.PlayerData.citizenid..':'..reason..':'..key end
@@ -82,18 +82,35 @@ local function move(p,from,to,amount,reason,data)
     local prefix='player:'..p.PlayerData.citizenid..':'
     return transfer(p,prefix..from,prefix..to,amount,reason,data)
 end
+--- 2.0.3 (owner 2026-11-01): a refused move says why (w_centralbank's BankTransfer answers ok, why): short of money
+--- with what it costs (the bank's tax included) and what he has, a frozen account, the bank down -- it used
+--- to say "not enough" whatever happened. `source`: 'cash' | 'bank' | the savings account object.
+local function money(n) return ('%.2f'):format(tonumber(n) or 0) end
+local function refused(p, why, source, amount)
+    if type(why) ~= 'string' then return failure('msg.not_enough') end -- a w_centralbank before 2.1 answers its tax there
+    if why == 'account_frozen' then return failure('msg.frozen') end
+    if why == 'near_bank' then return failure('msg.near_bank') end
+    if why == 'economy_not_ready' or why == 'invalid_bank' then return failure('msg.unavailable') end
+    if why ~= 'insufficient_funds' then return failure() end
+    local need = money(withTax(p, amount))
+    if source == 'cash' then return failure('msg.not_enough_cash', { need, money(p.Functions.GetMoney('cash')) }) end
+    if source == 'bank' then return failure('msg.not_enough_bank', { need, money(p.Functions.GetMoney('bank')) }) end
+    return failure('msg.not_enough_savings', { need, money(source.GetBalance()) })
+end
 local actions = {}
 actions.doDeposit = function(p, data)
     local amount = BankAccounts.validAmount(data.amount)
     if not amount then return failure('msg.invalid_amount') end
-    if not move(p, 'cash', 'bank', amount, 'bank-deposit', data) then return failure('msg.not_enough') end
+    local moved, why = move(p, 'cash', 'bank', amount, 'bank-deposit', data)
+    if not moved then return refused(p, why, 'cash', amount) end
     record(p, amount, false, 'Cash deposit',data)
     return { ok=true, key='msg.deposit_success', args={amount} }
 end
 actions.doWithdraw = function(p, data)
     local amount = BankAccounts.validAmount(data.amount)
     if not amount then return failure('msg.invalid_amount') end
-    if not move(p, 'bank', 'cash', amount, 'bank-withdraw', data) then return failure('msg.not_enough') end
+    local moved, why = move(p, 'bank', 'cash', amount, 'bank-withdraw', data)
+    if not moved then return refused(p, why, 'bank', amount) end
     record(p, withTax(p,amount), true, 'Cash withdrawal',data)
     return { ok=true, key='msg.withdraw_success', args={amount} }
 end
@@ -105,7 +122,8 @@ actions.savingsDeposit = function(p, data)
     local amount, account = BankAccounts.validAmount(data.amount), savingsAccounts[p.PlayerData.citizenid]
     if not amount then return failure('msg.invalid_amount') end
     if not account then return failure('msg.no_savings') end
-    if not transfer(p,'player:'..p.PlayerData.citizenid..':bank',account.accountId,amount,'savings-deposit',data) then return failure('msg.not_enough') end
+    local moved, why = transfer(p,'player:'..p.PlayerData.citizenid..':bank',account.accountId,amount,'savings-deposit',data)
+    if not moved then return refused(p, why, 'bank', amount) end
     record(p, withTax(p,amount), true, 'To savings',data)
     BankAccounts.statement(p.PlayerData.citizenid,'Savings',amount,0,account.GetBalance(),'Bank to savings',nil,statementKey(data,p.PlayerData.citizenid,'Savings'))
     return { ok=true, key='msg.savings_deposit_success', args={amount} }
@@ -114,7 +132,8 @@ actions.savingsWithdraw = function(p, data)
     local amount, account = BankAccounts.validAmount(data.amount), savingsAccounts[p.PlayerData.citizenid]
     if not amount then return failure('msg.invalid_amount') end
     if not account then return failure('msg.no_savings') end
-    if not transfer(p,account.accountId,'player:'..p.PlayerData.citizenid..':bank',amount,'savings-withdraw',data) then return failure('msg.not_enough') end
+    local moved, why = transfer(p,account.accountId,'player:'..p.PlayerData.citizenid..':bank',amount,'savings-withdraw',data)
+    if not moved then return refused(p, why, account, amount) end
     record(p, amount, false, 'From savings',data)
     BankAccounts.statement(p.PlayerData.citizenid,'Savings',0,withTax(p,amount),account.GetBalance(),'Savings to bank',nil,statementKey(data,p.PlayerData.citizenid,'Savings'))
     return { ok=true, key='msg.savings_withdraw_success', args={amount} }
@@ -146,7 +165,8 @@ actions.doTransfer = function(p, data)
     if cid == tostring(p.PlayerData.citizenid) then return failure('msg.transfer_self') end
     local to='player:'..cid..':bank'
     if not exports.w_centralbank:EnsureAccount(to,cid,'player') then return failure() end
-    if not transfer(p,'player:'..p.PlayerData.citizenid..':bank',to,amount,'bank-transfer',data) then return failure('msg.not_enough') end
+    local moved, why = transfer(p,'player:'..p.PlayerData.citizenid..':bank',to,amount,'bank-transfer',data)
+    if not moved then return refused(p, why, 'bank', amount) end
     record(p, withTax(p,amount), true, 'Transfer to ' .. shown,data)
     local receivedBalance = exports.w_centralbank:GetBalance(to)
     BankAccounts.statement(cid, 'Checking', amount, 0, receivedBalance, 'Transfer from ' .. tostring(p.PlayerData.charinfo.account),nil,statementKey(data,cid,'Received-'..p.PlayerData.citizenid))
@@ -202,7 +222,12 @@ w.addCommand('givecash', {help=locale('cmd.givecash'), params={{name='id',help=l
     if not p or not other or id==src then return notify('notify.wrong_id','error') end
     if p.PlayerData.metadata.isdead then return notify('notify.dead','error') end
     if GetPlayerRoutingBucket(src)~=GetPlayerRoutingBucket(id) or #(GetEntityCoords(GetPlayerPed(src))-GetEntityCoords(GetPlayerPed(id))) > (p.PlayerData.metadata.inlaststand and 3 or 10) then return notify('notify.too_far','error') end
-    if not exports.w_centralbank:Transfer('player:'..p.PlayerData.citizenid..':cash','player:'..other.PlayerData.citizenid..':cash',amount,'givecash') then return notify('notify.not_enough_cash','error') end
+    local given, why = exports.w_centralbank:Transfer('player:'..p.PlayerData.citizenid..':cash','player:'..other.PlayerData.citizenid..':cash',amount,'givecash')
+    if not given then
+        -- 2.0.3: what he carries when that is the reason; otherwise the money did not move for another cause
+        if why == 'insufficient_funds' then return notify('notify.not_enough_cash_have','error',('%.2f'):format(p.Functions.GetMoney('cash') or 0)) end
+        return notify(why == 'account_frozen' and 'msg.frozen' or 'notify.give_failed','error')
+    end
     -- both sides see a name and a citizen id, never a server id
     notify('notify.gave_cash','success',amount,w.citizen.label(target))
     TriggerClientEvent('w_banking:client:notify',id,'notify.received_cash','success',amount,w.citizen.label({ citizenid = p.PlayerData.citizenid, name = getCharacterName(src) }))

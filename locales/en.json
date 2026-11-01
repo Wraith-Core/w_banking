@@ -26,7 +26,8 @@
     "wrong_id": "Wrong ID.",
     "invalid_citizen": "Invalid citizen ID.",
     "no_citizen": "No player with this citizen ID.",
-    "citizen_offline": "%s is not in the game right now."
+    "citizen_offline": "%s is not in the game right now.",
+    "not_enough_cash_have": "You do not carry that much cash: you have %s$."
   },
   "msg": {
     "deposit_success": "You deposited $%s in cash successfully.",
@@ -47,7 +48,11 @@
     "failed": "The transaction could not be completed. Refresh your balance and retry.",
     "unavailable": "Banking is temporarily unavailable.",
     "near_bank": "Approach a bank counter to use your account.",
-    "busy": "Wait for the current transaction to finish."
+    "busy": "Wait for the current transaction to finish.",
+    "not_enough_cash": "Not enough cash: %s$ needed, you carry %s$.",
+    "not_enough_bank": "Not enough in your account: %s$ needed with the bank tax, your balance is %s$.",
+    "not_enough_savings": "Not enough savings: %s$ needed, your savings hold %s$.",
+    "frozen": "Your account is frozen by the central bank; the action cannot go through."
   },
   "ui": {
     "title": "Banking",
