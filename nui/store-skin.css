@@ -74,7 +74,7 @@ body.wst-root{font-size:clamp(calc(13 * var(--w-ui-px)),1.6vh,calc(17 * var(--w-
 /* the choices: ink at 60%, the one under the cursor in full ink, lifted by a lighter swipe and underlined in red */
 .wst-root dialog .wst-button{min-height:0;padding:calc(6 * var(--w-ui-px)) calc(14 * var(--w-ui-px)) calc(10 * var(--w-ui-px));white-space:nowrap;font-family:var(--w-f-action)!important;font-weight:var(--w-wt-action)!important;font-size:calc(21 * var(--w-ui-px) * var(--w-k-action));line-height:1.15;text-transform:none;color:rgba(17,17,17,.62)!important}
 [dir=ltr] .wst-root dialog .wst-button{font-variant-caps:all-small-caps;letter-spacing:.07em;font-size:calc(22 * var(--w-ui-px))}
-.wst-root dialog .wst-button.primary{color:var(--w-note-ink)!important}
+.wst-root dialog .wst-button.primary{color:var(--w-note-ink)!important;--w-paper-lit:#FFFFFF;--w-ink:var(--w-note-ink,#111111)}
 .wst-root dialog .wst-button::before{background:transparent!important}
 .wst-root dialog .wst-button::after{content:'';position:absolute;inset-inline:16%;bottom:0;height:calc(3.5 * var(--w-ui-px));background:var(--w-red);opacity:0;pointer-events:none;transition:opacity 140ms var(--w-ease)}
 .wst-root dialog .wst-button:hover:not(:disabled),.wst-root dialog .wst-button:focus-visible{color:var(--w-ink)!important}

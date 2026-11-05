@@ -29,7 +29,7 @@ button:focus-visible,input:focus-visible{outline:none}
 #bank{position:absolute;inset:5vh 6vw;max-width:calc(1280 * var(--w-ui-px));margin:auto;display:grid;grid-template-columns:calc(252 * var(--w-ui-px)) minmax(0,1fr);overflow:hidden}
 
 /* ── The side: wordmark, the holder, the services ── */
-.sidebar{position:relative;display:flex;flex-direction:column;min-height:0;padding:calc(30 * var(--w-ui-px)) calc(22 * var(--w-ui-px)) calc(22 * var(--w-ui-px));background:linear-gradient(180deg,rgba(10,10,10,.55),rgba(10,10,10,.3));border-inline-end:max(1px, calc(1 * var(--ws-px))) solid var(--w-rule)}
+.sidebar{position:relative;display:flex;flex-direction:column;min-height:0;padding:calc(30 * var(--w-ui-px)) calc(22 * var(--w-ui-px)) calc(22 * var(--w-ui-px));background:linear-gradient(180deg,rgba(11,10,10,.55),rgba(11,10,10,.3));border-inline-end:max(1px, calc(1 * var(--ws-px))) solid var(--w-rule)}
 .brand{font-family:var(--w-f-display);font-size:calc(34 * var(--w-ui-px));line-height:1;letter-spacing:.08em;text-align:center;color:var(--w-paper)}
 .brand span{display:block;margin-top:calc(9 * var(--w-ui-px));font-family:var(--w-f-label);font-size:calc(10.5 * var(--w-ui-px));line-height:1.3;letter-spacing:.24em;color:var(--w-paper-dim)}
 /* no emblems: the monogram seal is not drawn */
@@ -65,7 +65,7 @@ h1{margin:calc(6 * var(--w-ui-px)) 0 0;font-size:calc(32 * var(--w-ui-px) * var(
 
 /* a status line: reading text between hairlines, told apart by its mark (a tick, or a red square) */
 #notice{display:flex;align-items:flex-start;gap:calc(10 * var(--w-ui-px));margin-bottom:calc(14 * var(--w-ui-px));padding:calc(9 * var(--w-ui-px)) calc(4 * var(--w-ui-px));border-block:max(1px, calc(1 * var(--ws-px))) solid var(--w-rule-2);font-family:var(--w-f-text);font-size:calc(16 * var(--w-ui-px) * var(--w-k-text));line-height:var(--w-lh-text);color:var(--w-paper)}
-#notice::before{content:'';flex:none;width:calc(15 * var(--w-ui-px));height:calc(15 * var(--w-ui-px));margin-top:.42em;background:var(--w-paper);-webkit-mask:var(--w-tex-tick) center/contain no-repeat;mask:var(--w-tex-tick) center/contain no-repeat}
+#notice::before{content:'';flex:none;width:calc(15 * var(--w-ui-px));height:calc(15 * var(--w-ui-px));margin-top:.42em;background:var(--w-green,#9FC79A);-webkit-mask:var(--w-tex-tick) center/contain no-repeat;mask:var(--w-tex-tick) center/contain no-repeat}
 #notice.error::before{width:calc(7 * var(--w-ui-px));height:calc(7 * var(--w-ui-px));margin-top:.62em;background:var(--w-red);-webkit-mask:none;mask:none}
 
 #workspace{flex:1;min-height:0;overflow:auto;padding-inline-end:calc(6 * var(--w-ui-px))}
