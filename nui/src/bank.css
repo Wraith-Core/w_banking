@@ -1,0 +1,158 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   w_banking · bank.css - the bank's own parts over the kit (kit.css stays a verbatim copy of w_train's)
+   2.1.0: the counter is a board of the kit docked at the inline-start edge (the right in Arabic) inside the 16:9
+   frame: the masthead line, the account card, the services as tabs over their page, the actions strip, and the
+   paper note for the review. Ink and paper, one red used only as a mark: the open tab, the main action, the
+   ribbon, an error. The balances are big figures in RDR Catalogue (owner's choice); every other number EB Garamond.
+   1rem = 20px at 1920x1080 (the kit's root); every px here follows the screen through ui-scale.cjs.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type='number'] { -moz-appearance: textfield; }
+button:disabled { cursor: default; }
+[hidden] { display: none !important; }
+
+/* a big figure: RDR Catalogue, lining, left to right inside Arabic */
+.bk-fig {
+  font-family: 'RDR Catalogue', 'EB Garamond', Georgia, serif;
+  font-weight: 400;
+  font-size: 2.6rem;
+  line-height: 1;
+  color: var(--paper);
+  font-variant-numeric: lining-nums tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+  white-space: nowrap;
+}
+.bk-fig.is-mid { font-size: 1.85rem; }
+.bk-fig.is-small { display: flex; align-items: center; height: 2.3rem; font-size: 1.45rem; color: var(--paper-dim); }
+
+/* ══════════ The masthead: refresh and close at its end ══════════ */
+.bk-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--paper-dim);
+  transition: color 120ms var(--ease), background-color 120ms var(--ease);
+}
+.bk-icon .wf-glyph { width: 0.95rem; height: 0.95rem; }
+.bk-icon:hover:not(:disabled) { color: var(--paper); background: var(--ink-3); box-shadow: inset 0 -2px 0 var(--red); }
+.bk-icon:disabled { opacity: 0.4; }
+.wf-mast-item b { font-family: 'EB Garamond', Georgia, serif; }
+
+/* ══════════ The account card ══════════ */
+.bk-head-wrap { flex: none; }
+.bk-head-wrap .wf-card { height: auto; }
+.bk-head { height: auto; flex-direction: row; align-items: center; justify-content: space-between; gap: 1.4rem; padding-block: 1.2rem 1.15rem; }
+.bk-holder { min-width: 0; flex: 1; }
+.bk-holder .wf-h { font-size: 1.8rem; }
+.bk-number { margin-top: 0.25rem; display: flex; align-items: baseline; gap: 0.5rem; white-space: nowrap; }
+.bk-number span { font: 500 0.88rem/1.1 var(--f-label); color: var(--paper-faint); font-variant-caps: all-small-caps; letter-spacing: 0.1em; }
+.bk-number b { font-weight: 500; font-size: 1.1rem; color: var(--paper); letter-spacing: 0.04em; }
+.bk-balance { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem; }
+.bk-balance-note { font: 400 0.88rem/1.2 var(--f-serif); color: var(--paper-faint); white-space: nowrap; }
+
+/* ══════════ The services: the tabs over their page ══════════ */
+.bk-page-body { padding: 1.25rem 1.6rem 1rem; }
+.bk-tabs { flex-wrap: nowrap; }
+.wf-tab:not(.is-active):hover:not(:disabled) { color: var(--ink); }
+.wf-tab:not(.is-active):hover:not(:disabled)::before { opacity: 1; }
+.wf-tab:disabled { opacity: 0.45; }
+.wf:not(.is-rtl) .bk-tabs .wf-tab { padding: 0 0.6rem; font-size: 1rem; letter-spacing: 0.06em; }
+.bk-notice { flex: none; margin: 0.75rem 0 0; white-space: pre-line; }
+.wf-note-line.bk-notice { margin-bottom: 0; color: var(--paper-dim); }
+
+.bk-h2 { font: 600 1.45rem/1.25 var(--f-display); color: var(--paper); margin-bottom: 0.3rem; }
+.bk-welcome { margin-bottom: 0.4rem; }
+
+/* the overview: the three accounts as figures on one ruled line (no boxes), the services as rows */
+.bk-figs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-block: 1px solid var(--rule); }
+.bk-figcell { display: flex; flex-direction: column; gap: 0.45rem; min-width: 0; padding: 0.85rem 0.2rem 0.9rem; }
+.bk-figcell + .bk-figcell { padding-inline-start: 1rem; border-inline-start: 1px solid var(--rule); }
+.bk-quick { flex: none; }
+.bk-row { width: 100%; height: 3.35rem; text-align: start; }
+.bk-row:hover:not(:disabled)::before { opacity: 1; }
+.bk-row:hover:not(:disabled) { color: var(--ink); border-bottom-color: transparent; }
+.bk-row:hover:not(:disabled) .wf-row-meta { color: rgba(17, 17, 17, 0.62); }
+.bk-row:hover:not(:disabled) .wf-row-state { color: var(--ink); }
+.bk-row .wf-row-state { width: 1rem; height: 1rem; }
+.bk-row .wf-row-state .wf-glyph { width: 100%; height: 100%; }
+.bk-side { margin: 1rem 0 0; white-space: pre-line; }
+
+/* a money form: the fields, the quick amounts, the tax */
+.bk-form .wf-grid { margin-top: 0.6rem; }
+.bk-chips { margin-top: 0.85rem; }
+.bk-chips .wf-btn .wf-num { font-size: 1.02rem; letter-spacing: 0; font-variant-caps: normal; }
+.bk-tax { margin: 0.9rem 0 0; }
+
+/* the statement: the kit's ruled lines, four columns */
+.bk-hist { display: flex; flex-direction: column; }
+.bk-hist-line {
+  display: grid;
+  grid-template-columns: 7.6rem minmax(0, 1fr) 7.4rem 7.4rem;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 2.95rem;
+  padding: 0.35rem 0.2rem;
+  border-bottom: 1px solid var(--rule);
+}
+.bk-hist-line.is-head { min-height: 0; padding-block: 0 0.35rem; border-bottom-color: var(--rule-2); }
+.bk-hist-line .wf-label:nth-child(n+3) { text-align: end; }
+.bk-date { font-size: 0.95rem; color: var(--paper-dim); }
+.bk-desc { display: flex; flex-direction: column; gap: 0.12rem; min-width: 0; }
+.bk-desc-name { font: 500 1.05rem/1.2 var(--f-serif); color: var(--paper); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bk-desc-acc { font: 500 0.8rem/1.1 var(--f-label); color: var(--paper-faint); }
+.bk-change, .bk-after { text-align: end; font-size: 1.05rem; }
+.bk-change { color: var(--paper-dim); }
+.bk-change.is-in { color: var(--green); }
+.bk-after { color: var(--paper); }
+
+/* ══════════ The actions strip ══════════ */
+.bk-actions { justify-content: flex-start; gap: 1.2rem; padding: 0 1.4rem; }
+.bk-hint { margin-inline-start: auto; font: 500 0.85rem/1.2 var(--f-label); color: var(--paper-faint); white-space: pre; direction: ltr; unicode-bidi: plaintext; }
+.wf-act:hover:not(:disabled) { color: var(--paper); }
+.wf-act:hover:not(:disabled)::after { opacity: 1; transform: none; }
+
+/* the main action: the red mark band (w_crafting's .wc-btn.is-main) */
+.bk-main {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 10rem;
+  height: 2.6rem;
+  padding: 0 1.2rem;
+  color: var(--mark-ink);
+  font: 600 1.08rem/1 var(--f-label);
+  white-space: nowrap;
+}
+.bk-main::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--mark);
+  -webkit-mask: var(--tex-band-sm) center / 100% 100% no-repeat;
+  transition: background-color 120ms var(--ease);
+}
+.bk-main:hover:not(:disabled)::before { background: var(--mark-lit); }
+.bk-main:active:not(:disabled)::before { background: var(--mark-deep); }
+.bk-main:disabled { opacity: 0.4; }
+.wf:not(.is-rtl) .bk-main { font-variant-caps: all-small-caps; letter-spacing: 0.08em; font-size: 1.18rem; }
+
+/* the review note: one line per fact */
+.bk-note-text { white-space: pre-line; }
+.wf-choice { white-space: nowrap; }
+
+/* ══════════ Arabic ══════════ */
+.is-rtl .bk-holder .wf-h { font-size: 1.7rem; }
+.is-rtl .bk-number span { font-weight: 700; font-size: 0.86rem; letter-spacing: 0; font-variant-caps: normal; }
+.is-rtl .bk-balance-note, .is-rtl .bk-desc-acc, .is-rtl .bk-hint { font-weight: 700; }
+.is-rtl .bk-h2 { font-weight: 400; font-size: 1.4rem; line-height: 1.45; }
+.is-rtl .bk-desc-name { font-size: 1.06rem; line-height: 1.35; }
+.is-rtl .bk-main { font-weight: 700; font-size: 1.02rem; }
+.is-rtl .wf-error.bk-notice { font-size: 0.95rem; }
