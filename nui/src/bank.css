@@ -7,6 +7,20 @@
    1rem = 20px at 1920x1080 (the kit's root); every px here follows the screen through ui-scale.cjs.
    ════════════════════════════════════════════════════════════════════════════ */
 
+/* 2.1.1 (owner): the counter sits in the MIDDLE of the screen in every language, as before 2.1.0 (a 1280x970
+   window at 1920x1080), not docked at the inline-start edge. Physical centring: the same place in Arabic and English;
+   the content inside stays right to left in Arabic. Centred, so it stays inside the 16:9 frame on an ultrawide. */
+.bk-panel {
+  inset-inline: 0;
+  margin-inline: auto;
+  width: 64rem;
+  max-width: calc(100vw - 2 * var(--ws-gutter) - 4rem);
+  height: 48.5rem;
+  top: max(2rem, calc((100vh - 48.5rem) / 2));
+}
+/* the shade evenly round the centred counter (w_crafting's), not darker on one side */
+.bk .wf-scrim { background: radial-gradient(120% 90% at 50% 50%, rgba(11, 10, 10, 0.55), rgba(11, 10, 10, 0.86)); transform: none; }
+
 input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 input[type='number'] { -moz-appearance: textfield; }
