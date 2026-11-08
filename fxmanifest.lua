@@ -4,7 +4,7 @@ rdr3_warning 'I acknowledge that this is a prerelease build of RedM, and I am aw
 lua54 'yes'
 
 description 'w_banking'
-version '2.0.5'
+version '2.0.6'
 
 -- w_lib bootstrap must run before any script that uses w / cache
 shared_scripts { '@w_lib/init.lua', 'config.lua' }

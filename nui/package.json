@@ -1,0 +1,11 @@
+{
+  "name": "w_banking",
+  "private": true,
+  "version": "2.1.0",
+  "type": "module",
+  "description": "No npm install needed: vite (5.4) is the one in F:/Server RedM/Wraith Core/node_modules.",
+  "scripts": {
+    "dev": "node ../../../../../../node_modules/vite/bin/vite.js --port 5303 --strictPort",
+    "build": "node ../../../../../../node_modules/vite/bin/vite.js build"
+  }
+}
