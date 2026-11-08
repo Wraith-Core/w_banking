@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>w_banking</title>
+  <script type="module" src="./assets/app.js"></script>
+  <link rel="stylesheet" href="./assets/app.css">
+</head>
+<body>
+  <!-- 2.1.0: the bank on the board kit (src/kit.css + src/bank.css): a board docked at the inline-start edge, its
+       services as tabs, the confirm as the kit's paper note. Every word comes from the locales (openbank.strings). -->
+  <main id="bank" class="wf bk is-rtl" hidden>
+    <div class="wf-scrim" aria-hidden="true"></div>
+    <div id="panel" class="wf-panel bk-panel">
+      <span class="wf-strip" aria-hidden="true"></span>
+
+      <!-- the masthead: the bank's name, the cash on hand, refresh and close -->
+      <header class="wf-mast wf-in" style="--i:0">
+        <span id="brand" class="wf-mark"></span>
+        <span class="wf-mast-rule"></span>
+        <span class="wf-mast-item"><span id="cashLabel"></span><b id="cash" class="wf-num"></b></span>
+        <button id="refresh" class="bk-icon" type="button">
+          <svg class="wf-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.2 8.6a7.6 7.6 0 1 0 .55 5.9"/><path d="M19.6 3.9v4.85h-4.85"/></svg>
+        </button>
+        <button id="close" class="bk-icon" type="button">
+          <svg class="wf-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5.6 5.4l12.9 13.1M18.4 5.5L5.5 18.45"/></svg>
+        </button>
+      </header>
+
+      <!-- the account: its holder and number, the current balance (a big figure) -->
+      <div class="wf-wrap bk-head-wrap wf-in" style="--i:1">
+        <div class="wf-card wf-head">
+          <div class="wf-card-body bk-head">
+            <div class="bk-holder">
+              <div id="ownerLabel" class="wf-kicker"></div>
+              <h1 id="owner" class="wf-h"></h1>
+              <div class="wf-sub bk-number"><span id="numberLabel"></span> <b id="number" class="wf-num"></b></div>
+            </div>
+            <div class="bk-balance">
+              <span id="bankLabel" class="wf-label"></span>
+              <strong id="balance" class="bk-fig"></strong>
+              <span id="balanceNote" class="bk-balance-note"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- the services: one tab each, the open one's page under them -->
+      <div class="wf-wrap wf-page-wrap is-focus wf-in" style="--i:2">
+        <span class="wf-tick" aria-hidden="true"></span>
+        <div class="wf-card">
+          <div class="wf-card-body bk-page-body">
+            <nav id="nav" class="wf-tabs bk-tabs"></nav>
+            <div id="notice" role="status" aria-live="polite" hidden></div>
+            <div id="workspace" class="wf-page is-scroll"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- the actions strip: the page's main action (the red band) and the way to the central bank -->
+      <div class="wf-wrap wf-actions-wrap wf-in" style="--i:3">
+        <div class="wf-card">
+          <div id="actions" class="wf-card-body wf-actions bk-actions"></div>
+        </div>
+      </div>
+
+      <!-- the paper note: review a transaction -->
+      <div id="confirm" class="wf-note" hidden role="dialog" aria-modal="true">
+        <div class="wf-note-plate">
+          <div id="confirmKicker" class="wf-note-kicker"></div>
+          <h2 id="confirmTitle" class="wf-note-q"></h2>
+          <p id="confirmText" class="wf-note-sub bk-note-text"></p>
+          <div class="wf-note-row">
+            <button type="button" id="cancelConfirm" class="wf-choice"></button>
+            <button type="button" id="acceptConfirm" class="wf-choice"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

@@ -27,6 +27,7 @@ button:disabled { cursor: default; }
 }
 .bk-fig.is-mid { font-size: 1.85rem; }
 .bk-fig.is-small { display: flex; align-items: center; height: 2.3rem; font-size: 1.45rem; color: var(--paper-dim); }
+.is-rtl .bk-fig.is-small { justify-content: flex-end; }
 
 /* ══════════ The masthead: refresh and close at its end ══════════ */
 .bk-icon {
@@ -111,8 +112,10 @@ button:disabled { cursor: default; }
 .bk-after { color: var(--paper); }
 
 /* ══════════ The actions strip ══════════ */
-.bk-actions { justify-content: flex-start; gap: 1.2rem; padding: 0 1.4rem; }
+.bk-actions { flex-direction: row; align-items: center; justify-content: flex-start; gap: 1.2rem; padding: 0 1.4rem; }
 .bk-hint { margin-inline-start: auto; font: 500 0.85rem/1.2 var(--f-label); color: var(--paper-faint); white-space: pre; direction: ltr; unicode-bidi: plaintext; }
+/* the hint is set left to right (its keys), so its own start is the left: in Arabic push it from the right */
+.is-rtl .bk-hint { margin-left: 0; margin-right: auto; }
 .wf-act:hover:not(:disabled) { color: var(--paper); }
 .wf-act:hover:not(:disabled)::after { opacity: 1; transform: none; }
 

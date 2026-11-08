@@ -4,7 +4,7 @@ rdr3_warning 'I acknowledge that this is a prerelease build of RedM, and I am aw
 lua54 'yes'
 
 description 'w_banking'
-version '2.0.6'
+version '2.1.0'
 
 -- w_lib bootstrap must run before any script that uses w / cache
 shared_scripts { '@w_lib/init.lua', 'config.lua' }
@@ -17,15 +17,14 @@ server_scripts { '@oxmysql/lib/MySQL.lua', 'server/accounts.lua', 'server/wrappe
 
 client_script 'client/*.lua'
 
-ui_page 'nui/index.html'
+-- 2.1.0: the page is built by vite (nui/src -> nui/build, `npm run build` in nui/); the build is committed
+ui_page 'nui/build/index.html'
 
 files {
     'locales/*.json',
-    'nui/index.html',
-    'nui/style.css', 'nui/store-skin.css', 'nui/store-skin.js',
-    'nui/w_banking.js',
+    'nui/build/index.html',
+    'nui/build/**/*',
     'w_banking.sql',
-    'nui/fonts/*.woff2',
 }
 
 -- w_core too: its core object is fetched at load (w.framework:getCoreObject())
