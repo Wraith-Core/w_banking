@@ -101,6 +101,25 @@ local function spawnClerk(model, coords)
     return pedId
 end
 
+-- The counter's name for the page's first sentence («رصيدك … في بنك فالنتاين»): the bank whose clerk stands
+-- nearest (within 30 m), in the player's language; nil when none is near (the page then says only "the bank").
+local function nearestBankName()
+    local ok, name = pcall(function()
+        local me = GetEntityCoords(PlayerPedId())
+        local best, bestDist = nil, 30.0
+        for _, v in pairs(banks or {}) do
+            local c = type(v) == 'table' and v.coords
+            if c and c.x and c.y and c.z then
+                local d = #(me - vector3(c.x + 0.0, c.y + 0.0, c.z + 0.0))
+                if d < bestDist and type(v.label) == 'string' and v.label ~= '' then best, bestDist = v, d end
+            end
+        end
+        if not best then return nil end
+        return best.label:sub(1, 5) == 'bank.' and locale(best.label) or best.label
+    end)
+    return ok and name or nil
+end
+
 -- Open Bank UI -- InBank is raised before the server round trip so a second prompt
 -- completion (or event) during the wait cannot open the page twice.
 function openAccountScreen(refresh)
@@ -118,6 +137,7 @@ function openAccountScreen(refresh)
     local payload = nuiLocalePayload()
     payload.status = 'openbank'
     payload.information = banking
+    payload.bankName = nearestBankName()
     SendNUIMessage(payload)
 end
 exports('openAccountScreen', openAccountScreen)
