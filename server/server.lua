@@ -24,16 +24,58 @@ AddEventHandler('w_banking:server:modifyBank', modifyBank)
 exports('modifyBank', modifyBank)
 exports('savings', function(cid) return savingsAccounts[cid] end)
 exports('gang', function(gid) return gangAccounts[gid] end)
+local function getPlayer(src)
+    src = tonumber(src)
+    if not src or src <= 0 then return nil end
+    local okP, raw = pcall(function()
+        local list = exports.w_lib:FwGetOnlinePlayers()
+        if type(list) == 'table' then
+            for _, p in ipairs(list) do
+                if type(p) == 'table' and p.PlayerData and tonumber(p.PlayerData.source) == src then
+                    return p
+                end
+            end
+        end
+        return nil
+    end)
+    if okP and type(raw) == 'table' and type(raw.PlayerData) == 'table' and type(raw.Functions) == 'table' then
+        return raw
+    end
+    local okCid, cid = pcall(function() return exports.w_lib:FwGetCharacterIdentifier(src) end)
+    if not okCid or not cid or cid == '' then return nil end
+    local okPd, pd = pcall(function() return exports.w_lib:FwGetPlayerData(src) end)
+    local charinfo = okPd and type(pd) == 'table' and type(pd.charinfo) == 'table' and pd.charinfo or {}
+    local okMeta, meta = pcall(function() return exports.w_lib:FwGetMetadata(src) end)
+    if not okMeta or type(meta) ~= 'table' then
+        meta = okPd and type(pd) == 'table' and type(pd.metadata) == 'table' and pd.metadata or {}
+    end
+    return {
+        PlayerData = {
+            source = src,
+            citizenid = tostring(cid),
+            charinfo = charinfo,
+            metadata = meta,
+        },
+        Functions = {
+            GetMoney = function(kind)
+                local okM, val = pcall(function() return exports.w_lib:FwGetCurrency(src, kind) end)
+                return okM and tonumber(val) or 0
+            end,
+        },
+    }
+end
 function getCharacterName(src)
-    local p = WCore.Functions.GetPlayer(src)
-    return p and (p.PlayerData.charinfo.firstname .. ' ' .. p.PlayerData.charinfo.lastname)
+    local okN, name = pcall(function() return exports.w_lib:FwGetCharacterName(src) end)
+    if okN and type(name) == 'string' and name ~= '' then return name end
+    local p = getPlayer(src)
+    return p and ((p.PlayerData.charinfo.firstname or '') .. ' ' .. (p.PlayerData.charinfo.lastname or ''))
 end
 local function nearBank(src)
     local ped = GetPlayerPed(src)
     if not ped or ped == 0 then return false end
     local pos = GetEntityCoords(ped)
-    if GetResourceState('w_centralbank')~='started' or not exports.w_centralbank:IsReady() then return false end
-    banks=exports.w_centralbank:GetBanks()
+    if not exports.w_lib:EconIsReady() then return false end
+    banks=exports.w_lib:EconGetBanks()
     for _, bank in pairs(banks) do
         local c = bank.coords
         if #(pos - vector3(c.x,c.y,c.z)) <= Config.ServerDistance then return bank.id end
@@ -42,12 +84,12 @@ local function nearBank(src)
 end
 local function failure(key, args) return { ok = false, key = key or 'msg.failed', args = args } end
 local function information(src)
-    local p = WCore.Functions.GetPlayer(src)
+    local p = getPlayer(src)
     if not p or not BankAccounts.ready or not nearBank(src) then return nil end
     local d = p.PlayerData
     local savings = savingsAccounts[d.citizenid]
     return {
-        branch = nearBank(src), taxRate=exports.w_centralbank:TaxRate(nearBank(src)), closedEconomy=true, name = getCharacterName(src), accountinfo = tostring(d.charinfo.account or ''),
+        branch = nearBank(src), taxRate=exports.w_lib:EconTaxRate(nearBank(src)), closedEconomy=true, name = getCharacterName(src), accountinfo = tostring(d.charinfo.account or ''),
         bankbalance = p.Functions.GetMoney('bank'), cash = p.Functions.GetMoney('cash'),
         savings = savings and { amount = savings.GetBalance() } or nil,
         history = MySQL.query.await('SELECT account, deposited, withdraw, balance, date, type FROM bank_statements WHERE citizenid = ? AND account IN (?, ?) ORDER BY record_id DESC LIMIT 30', { d.citizenid, 'Checking', 'Savings' }) or {},
@@ -67,7 +109,7 @@ local function record(p, amount, withdrawal, note, data)
     BankAccounts.statement(p.PlayerData.citizenid, 'Checking', withdrawal and 0 or amount, withdrawal and amount or 0, p.Functions.GetMoney('bank'), note,nil,statementKey(data,p.PlayerData.citizenid,'Checking-'..tag))
 end
 local function withTax(p,amount)
-    local rate=exports.w_centralbank:TaxRate(nearBank(p.PlayerData.source)) or 0
+    local rate=exports.w_lib:EconTaxRate(nearBank(p.PlayerData.source)) or 0
     return amount+math.floor(amount*rate+0.5)/100
 end
 local function transfer(p,from,to,amount,reason,data)
@@ -76,7 +118,7 @@ local function transfer(p,from,to,amount,reason,data)
     local key=type(data)=='table' and data.requestKey
     if type(key)~='string' or #key<8 or #key>80 then key=nil end
     if key then key='bank:'..p.PlayerData.citizenid..':'..reason..':'..key end
-    return exports.w_centralbank:BankTransfer(p.PlayerData.source,branch,from,to,amount,reason,key)
+    return exports.w_lib:EconBankTransfer(p.PlayerData.source,branch,from,to,amount,reason,key)
 end
 local function move(p,from,to,amount,reason,data)
     local prefix='player:'..p.PlayerData.citizenid..':'
@@ -164,20 +206,25 @@ actions.doTransfer = function(p, data)
     cid = tostring(cid)
     if cid == tostring(p.PlayerData.citizenid) then return failure('msg.transfer_self') end
     local to='player:'..cid..':bank'
-    if not exports.w_centralbank:EnsureAccount(to,cid,'player') then return failure() end
+    if not exports.w_lib:EconEnsureAccount(to,cid,'player') then return failure() end
     local moved, why = transfer(p,'player:'..p.PlayerData.citizenid..':bank',to,amount,'bank-transfer',data)
     if not moved then return refused(p, why, 'bank', amount) end
     record(p, withTax(p,amount), true, 'Transfer to ' .. shown,data)
-    local receivedBalance = exports.w_centralbank:GetBalance(to)
+    local receivedBalance = exports.w_lib:EconGetBalance(to)
     BankAccounts.statement(cid, 'Checking', amount, 0, receivedBalance, 'Transfer from ' .. tostring(p.PlayerData.charinfo.account),nil,statementKey(data,cid,'Received-'..p.PlayerData.citizenid))
     -- Asked now, after the ledger calls yielded: he may have connected or left meanwhile.
-    local online = WCore.Functions.GetPlayerByCitizenId and WCore.Functions.GetPlayerByCitizenId(cid)
-    if online then TriggerClientEvent('w_banking:client:notify', online.PlayerData.source, 'msg.transfer_received', 'success', amount, getCharacterName(p.PlayerData.source)) end
+    local okOnline, online = pcall(function() return exports.w_lib:FwGetPlayerByCitizenId(cid) end)
+    local onlineSrc = okOnline and type(online) == 'table' and online.PlayerData and online.PlayerData.source or nil
+    if not onlineSrc then
+        local okSrc, s = pcall(function() return exports.w_lib:FwGetSource(cid) end)
+        onlineSrc = okSrc and tonumber(s) or nil
+    end
+    if onlineSrc then TriggerClientEvent('w_banking:client:notify', onlineSrc, 'msg.transfer_received', 'success', amount, getCharacterName(p.PlayerData.source)) end
     return { ok=true, key='msg.transfer_success', args={amount,shown} }
 end
 local function transact(src, action, data)
     if not BankAccounts.ready then return failure('msg.unavailable') end
-    local p = WCore.Functions.GetPlayer(src)
+    local p = getPlayer(src)
     if not p or not nearBank(src) or p.PlayerData.metadata.isdead then return failure('msg.near_bank') end
     if not actions[action] or type(data)~='table' then return failure('msg.invalid_amount') end
     local cid, now = p.PlayerData.citizenid, GetGameTimer()
@@ -218,11 +265,11 @@ w.addCommand('givecash', {help=locale('cmd.givecash'), params={{name='id',help=l
     local target, reason, offline = w.citizen.requireOnline(args.id, { self = src })
     if not target then return notify(CITIZEN_NOTICE[reason] or 'notify.no_citizen','error',w.citizen.label(offline)) end
     local id = target.source
-    local p, other = WCore.Functions.GetPlayer(src), WCore.Functions.GetPlayer(id)
+    local p, other = getPlayer(src), getPlayer(id)
     if not p or not other or id==src then return notify('notify.wrong_id','error') end
     if p.PlayerData.metadata.isdead then return notify('notify.dead','error') end
     if GetPlayerRoutingBucket(src)~=GetPlayerRoutingBucket(id) or #(GetEntityCoords(GetPlayerPed(src))-GetEntityCoords(GetPlayerPed(id))) > (p.PlayerData.metadata.inlaststand and 3 or 10) then return notify('notify.too_far','error') end
-    local given, why = exports.w_centralbank:Transfer('player:'..p.PlayerData.citizenid..':cash','player:'..other.PlayerData.citizenid..':cash',amount,'givecash')
+    local given, why = exports.w_lib:EconTransfer('player:'..p.PlayerData.citizenid..':cash','player:'..other.PlayerData.citizenid..':cash',amount,'givecash')
     if not given then
         -- 2.0.3: what he carries when that is the reason; otherwise the money did not move for another cause
         if why == 'insufficient_funds' then return notify('notify.not_enough_cash_have','error',('%.2f'):format(p.Functions.GetMoney('cash') or 0)) end
@@ -233,7 +280,7 @@ w.addCommand('givecash', {help=locale('cmd.givecash'), params={{name='id',help=l
     TriggerClientEvent('w_banking:client:notify',id,'notify.received_cash','success',amount,w.citizen.label({ citizenid = p.PlayerData.citizenid, name = getCharacterName(src) }))
 end)
 
-w.callback.register('w_banking:branches',function() return GetResourceState('w_centralbank')=='started' and exports.w_centralbank:GetBanks() or {} end)
+w.callback.register('w_banking:branches',function() return exports.w_lib:EconIsReady() and exports.w_lib:EconGetBanks() or {} end)
 
 -- A deleted character leaves nothing here, so its citizen id can be handed to someone else.
 --   exports.w_banking:PurgeCharacter(citizenid, ctx) -> true, { [thing] = n } | false, reason
@@ -266,7 +313,7 @@ exports('PurgeCharacter',function(citizenid,ctx)
         -- either stays (deleting it would lose that money); an empty one goes, and w_core's own
         -- pass deletes the empty banklegacy account, which it finds by its owner. Refusing an
         -- empty one would hold a deletion the other resources have already carried out.
-        if GetResourceState('w_centralbank')~='started' or not exports.w_centralbank:IsReady() then
+        if not exports.w_lib:EconIsReady() then
             local okF,funded=pcall(function()
                 if (tonumber(MySQL.scalar.await('SELECT COUNT(*) FROM bank_accounts WHERE citizenid=? AND amount<>0',{cid})) or 0)>0 then return true end
                 if (tonumber(MySQL.scalar.await("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='cb_accounts'")) or 0)==0 then return false end

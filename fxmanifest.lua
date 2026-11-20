@@ -27,5 +27,4 @@ files {
     'w_banking.sql',
 }
 
--- w_core too: its core object is fetched at load (w.framework:getCoreObject())
-dependencies { 'w_lib', 'w_core', 'oxmysql' }
+dependencies { 'w_lib', 'oxmysql' }

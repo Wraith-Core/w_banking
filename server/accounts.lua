@@ -24,16 +24,16 @@ function BankAccounts.load(owner, kind)
     local id = row.record_id
     local accountId='banklegacy:'..id
     local function ready()
-        return GetResourceState('w_centralbank')=='started' and exports.w_centralbank:IsReady()
-            and exports.w_centralbank:EnsureAccount(accountId,kind=='Savings' and owner or ('gang:'..owner),'legacy_bank')
+        return exports.w_lib:EconIsReady()
+            and exports.w_lib:EconEnsureAccount(accountId,kind=='Savings' and owner or ('gang:'..owner),'legacy_bank')
     end
     local function getBalance()
-        return ready() and exports.w_centralbank:GetBalance(accountId) or 0
+        return ready() and exports.w_lib:EconGetBalance(accountId) or 0
     end
     local function change(amount,description,withdraw)
         amount=BankAccounts.validAmount(amount)
         if not amount or not ready() then return false end
-        local ok=exports.w_centralbank:AdjustAccount(accountId,withdraw and -amount or amount,description or 'legacy-bank')
+        local ok=exports.w_lib:EconAdjustAccount(accountId,withdraw and -amount or amount,description or 'legacy-bank')
         if ok then
             BankAccounts.statement(kind=='Savings' and owner or nil,kind,withdraw and 0 or amount,withdraw and amount or 0,getBalance(),description,kind=='Gang' and owner or nil)
         end
@@ -53,7 +53,7 @@ function BankAccounts.load(owner, kind)
 end
 
 function BankAccounts.create(owner, kind, starting)
-    if GetResourceState('w_centralbank')~='started' or not exports.w_centralbank:IsReady() then return false end
+    if not exports.w_lib:EconIsReady() then return false end
     if not BankAccounts.ready or type(owner) ~= 'string' or owner == '' then return false end
     local key = kind .. ':' .. owner
     if BankAccounts.locks[key] then return false end
@@ -80,15 +80,15 @@ function BankAccounts.create(owner, kind, starting)
     return ok and result == true
 end
 
-AddEventHandler('w_centralbank:balanceChanged',function(account,balance)
-    local id=account:match('^banklegacy:(%d+)$')
+exports.w_lib:EconOnBalanceChanged(function(account,balance)
+    local id=tostring(account or ''):match('^banklegacy:(%d+)$')
     if id then MySQL.update('UPDATE bank_accounts SET amount=? WHERE record_id=?',{balance,tonumber(id)}) end
 end)
 
 -- w_core moved a character to another citizen id (w_core/server/citizen.lua) after renaming
 -- bank_accounts.citizenid. Rebuild the savings entry under the new id instead of moving it:
 -- the old object's closures still carry the old owner (statements, EnsureAccount owner).
-AddEventHandler('w_core:server:citizenIdChanged',function(old,new)
+exports.w_lib:FwOnCitizenIdChanged(function(old,new)
     old,new=tostring(old),tostring(new)
     savingsAccounts[old]=nil
     CreateThread(function() savingsAccounts[new]=BankAccounts.load(new,'Savings') end)

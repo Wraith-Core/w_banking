@@ -20,6 +20,6 @@ end)
 
 RegisterNUICallback('central',function(_,cb)
     CloseBank()
-    exports.w_centralbank:Open()
+    exports.w_lib:EconOpen()
     cb({ok=true})
 end)

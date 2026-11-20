@@ -61,5 +61,3 @@ Config.BankDoors = {
 	1329318347, -- inner door
 	1366165179, -- back door
 }
-
-WCore = w.framework:getCoreObject()

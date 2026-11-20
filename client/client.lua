@@ -225,12 +225,12 @@ RegisterNetEvent('w_banking:client:notify', function(key, style, ...)
 end)
 
 -- Resource Stop / Cleanup --
-AddEventHandler('WCore:Client:OnPlayerLoaded', function() CreateBanks() end)
-AddEventHandler('WCore:Client:OnPlayerUnload', function() BankCleanup() end) -- unload, not loaded: cleanup was running right after CreateBanks
+exports.w_lib:FwOnCharacterLoaded(function() CreateBanks() end)
+exports.w_lib:FwOnCharacterUnloaded(function() BankCleanup() end) -- unload, not loaded: cleanup was running right after CreateBanks
 AddEventHandler('onResourceStart', function(resource) if resource ~= GetCurrentResourceName() then return end CreateBanks() end)
 w.stopped(function() BankCleanup(); if CloseBank then CloseBank() end end)
 
-RegisterNetEvent('w_centralbank:branches',function(data)
+exports.w_lib:EconOnBranchesChanged(function(data)
     if type(data)~='table' then return end
     BankCleanup();banks=data;CreateBanks()
 end)
