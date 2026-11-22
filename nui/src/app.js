@@ -86,10 +86,13 @@ function actions(){
  let main='';
  if(tab==='savings'&&!info.savings)main='<button type="button" id="openSavings" class="bk-main">'+t('openSavings')+'</button>';
  else if(tab==='savings')main='<button type="submit" form="transaction" name="operation" value="savingsDeposit" class="bk-main">'+t('toSavings')+'</button><button type="submit" form="transaction" name="operation" value="savingsWithdraw" class="wf-act">'+t('fromSavings')+'</button>';
- else if(tab==='deposit'||tab==='withdraw'||tab==='transfer')main='<button type="submit" form="transaction" class="bk-main">'+t('submit')+'</button>';
+ else if(tab==='deposit')main='<button type="submit" form="transaction" class="bk-main">'+t('submitDeposit')+'</button>';
+ else if(tab==='withdraw')main='<button type="submit" form="transaction" class="bk-main">'+t('submitWithdraw')+'</button>';
+ else if(tab==='transfer')main='<button type="submit" form="transaction" class="bk-main">'+t('submitTransfer')+'</button>';
  const form=tab==='deposit'||tab==='withdraw'||tab==='transfer'||(tab==='savings'&&info.savings);
  const keys=[form?['Enter',t('k_enter')]:null,['Esc',t('k_esc')]].filter(Boolean);
- $('#actions').innerHTML=main+'<button type="button" id="central" class="wf-act">'+t('central')+'</button><span class="bk-keys">'+keys.map(([k,l])=>'<span><span class="bk-key">'+esc(k)+'</span>'+esc(l)+'</span>').join('')+'</span>';
+ const centralBtn=info.closedEconomy?'<button type="button" id="central" class="wf-act">'+t('central')+'</button>':'';
+ $('#actions').innerHTML=main+centralBtn+'<span class="bk-keys">'+keys.map(([k,l])=>'<span><span class="bk-key">'+esc(k)+'</span>'+esc(l)+'</span>').join('')+'</span>';
 }
 
 function render(){
