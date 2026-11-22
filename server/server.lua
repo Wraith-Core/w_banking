@@ -70,26 +70,43 @@ function getCharacterName(src)
     local p = getPlayer(src)
     return p and ((p.PlayerData.charinfo.firstname or '') .. ' ' .. (p.PlayerData.charinfo.lastname or ''))
 end
+local function usesCentralBank()
+    return GetResourceState('w_centralbank') == 'started'
+end
+local function activeBanks()
+    if usesCentralBank() then
+        return exports.w_lib:EconIsReady() and exports.w_lib:EconGetBanks() or {}
+    end
+    return Config.BankLocations or {}
+end
 local function nearBank(src)
     local ped = GetPlayerPed(src)
     if not ped or ped == 0 then return false end
     local pos = GetEntityCoords(ped)
-    if not exports.w_lib:EconIsReady() then return false end
-    banks=exports.w_lib:EconGetBanks()
+    if usesCentralBank() and not exports.w_lib:EconIsReady() then return false end
+    banks = activeBanks()
     for _, bank in pairs(banks) do
         local c = bank.coords
-        if #(pos - vector3(c.x,c.y,c.z)) <= Config.ServerDistance then return bank.id end
+        if c and #(pos - vector3(c.x, c.y, c.z)) <= Config.ServerDistance then
+            return bank.id or bank.name or true
+        end
     end
     return false
 end
 local function failure(key, args) return { ok = false, key = key or 'msg.failed', args = args } end
 local function information(src)
     local p = getPlayer(src)
-    if not p or not BankAccounts.ready or not nearBank(src) then return nil end
+    local branch = nearBank(src)
+    if not p or not BankAccounts.ready or not branch then return nil end
     local d = p.PlayerData
     local savings = savingsAccounts[d.citizenid]
+    local isCentral = usesCentralBank()
     return {
-        branch = nearBank(src), taxRate=exports.w_lib:EconTaxRate(nearBank(src)), closedEconomy=true, name = getCharacterName(src), accountinfo = tostring(d.charinfo.account or ''),
+        branch = branch,
+        taxRate = isCentral and (exports.w_lib:EconTaxRate(branch) or 0) or 0,
+        closedEconomy = isCentral,
+        name = getCharacterName(src),
+        accountinfo = tostring(d.charinfo.account or ''),
         bankbalance = p.Functions.GetMoney('bank'), cash = p.Functions.GetMoney('cash'),
         savings = savings and { amount = savings.GetBalance() } or nil,
         history = MySQL.query.await('SELECT account, deposited, withdraw, balance, date, type FROM bank_statements WHERE citizenid = ? AND account IN (?, ?) ORDER BY record_id DESC LIMIT 30', { d.citizenid, 'Checking', 'Savings' }) or {},
@@ -109,16 +126,20 @@ local function record(p, amount, withdrawal, note, data)
     BankAccounts.statement(p.PlayerData.citizenid, 'Checking', withdrawal and 0 or amount, withdrawal and amount or 0, p.Functions.GetMoney('bank'), note,nil,statementKey(data,p.PlayerData.citizenid,'Checking-'..tag))
 end
 local function withTax(p,amount)
+    if not usesCentralBank() then return amount end
     local rate=exports.w_lib:EconTaxRate(nearBank(p.PlayerData.source)) or 0
     return amount+math.floor(amount*rate+0.5)/100
 end
 local function transfer(p,from,to,amount,reason,data)
     local branch=nearBank(p.PlayerData.source)
     if not branch then return false,'near_bank' end
-    local key=type(data)=='table' and data.requestKey
-    if type(key)~='string' or #key<8 or #key>80 then key=nil end
-    if key then key='bank:'..p.PlayerData.citizenid..':'..reason..':'..key end
-    return exports.w_lib:EconBankTransfer(p.PlayerData.source,branch,from,to,amount,reason,key)
+    if usesCentralBank() then
+        local key=type(data)=='table' and data.requestKey
+        if type(key)~='string' or #key<8 or #key>80 then key=nil end
+        if key then key='bank:'..p.PlayerData.citizenid..':'..reason..':'..key end
+        return exports.w_lib:EconBankTransfer(p.PlayerData.source,branch,from,to,amount,reason,key)
+    end
+    return exports.w_lib:EconTransfer(from,to,amount,reason)
 end
 local function move(p,from,to,amount,reason,data)
     local prefix='player:'..p.PlayerData.citizenid..':'
@@ -164,20 +185,42 @@ actions.savingsDeposit = function(p, data)
     local amount, account = BankAccounts.validAmount(data.amount), savingsAccounts[p.PlayerData.citizenid]
     if not amount then return failure('msg.invalid_amount') end
     if not account then return failure('msg.no_savings') end
-    local moved, why = transfer(p,'player:'..p.PlayerData.citizenid..':bank',account.accountId,amount,'savings-deposit',data)
-    if not moved then return refused(p, why, 'bank', amount) end
-    record(p, withTax(p,amount), true, 'To savings',data)
-    BankAccounts.statement(p.PlayerData.citizenid,'Savings',amount,0,account.GetBalance(),'Bank to savings',nil,statementKey(data,p.PlayerData.citizenid,'Savings'))
+    if usesCentralBank() then
+        local moved, why = transfer(p,'player:'..p.PlayerData.citizenid..':bank',account.accountId,amount,'savings-deposit',data)
+        if not moved then return refused(p, why, 'bank', amount) end
+        record(p, withTax(p,amount), true, 'To savings',data)
+        BankAccounts.statement(p.PlayerData.citizenid,'Savings',amount,0,account.GetBalance(),'Bank to savings',nil,statementKey(data,p.PlayerData.citizenid,'Savings'))
+    else
+        local okDebit, why = exports.w_lib:EconAdjustPlayer(p.PlayerData.citizenid, 'bank', -amount, 'savings-deposit')
+        if okDebit ~= true then return refused(p, why, 'bank', amount) end
+        if not account.AddMoney(amount, 'Bank to savings') then
+            exports.w_lib:EconAdjustPlayer(p.PlayerData.citizenid, 'bank', amount, 'savings-deposit-rollback')
+            return failure()
+        end
+        record(p, amount, true, 'To savings', data)
+    end
     return { ok=true, key='msg.savings_deposit_success', args={amount} }
 end
 actions.savingsWithdraw = function(p, data)
     local amount, account = BankAccounts.validAmount(data.amount), savingsAccounts[p.PlayerData.citizenid]
     if not amount then return failure('msg.invalid_amount') end
     if not account then return failure('msg.no_savings') end
-    local moved, why = transfer(p,account.accountId,'player:'..p.PlayerData.citizenid..':bank',amount,'savings-withdraw',data)
-    if not moved then return refused(p, why, account, amount) end
-    record(p, amount, false, 'From savings',data)
-    BankAccounts.statement(p.PlayerData.citizenid,'Savings',0,withTax(p,amount),account.GetBalance(),'Savings to bank',nil,statementKey(data,p.PlayerData.citizenid,'Savings'))
+    if usesCentralBank() then
+        local moved, why = transfer(p,account.accountId,'player:'..p.PlayerData.citizenid..':bank',amount,'savings-withdraw',data)
+        if not moved then return refused(p, why, account, amount) end
+        record(p, amount, false, 'From savings',data)
+        BankAccounts.statement(p.PlayerData.citizenid,'Savings',0,withTax(p,amount),account.GetBalance(),'Savings to bank',nil,statementKey(data,p.PlayerData.citizenid,'Savings'))
+    else
+        if not account.RemoveMoney(amount, 'Savings to bank') then
+            return refused(p, 'insufficient_funds', account, amount)
+        end
+        local okCredit, why = exports.w_lib:EconAdjustPlayer(p.PlayerData.citizenid, 'bank', amount, 'savings-withdraw')
+        if okCredit ~= true then
+            account.AddMoney(amount, 'Savings withdraw rollback')
+            return refused(p, why, account, amount)
+        end
+        record(p, amount, false, 'From savings', data)
+    end
     return { ok=true, key='msg.savings_withdraw_success', args={amount} }
 end
 -- The recipient is named by his bank account number or by his citizen id ('12', the old 'OMG95204',
@@ -210,7 +253,7 @@ actions.doTransfer = function(p, data)
     local moved, why = transfer(p,'player:'..p.PlayerData.citizenid..':bank',to,amount,'bank-transfer',data)
     if not moved then return refused(p, why, 'bank', amount) end
     record(p, withTax(p,amount), true, 'Transfer to ' .. shown,data)
-    local receivedBalance = exports.w_lib:EconGetBalance(to)
+    local receivedBalance = exports.w_lib:EconGetBalance(to) or 0
     BankAccounts.statement(cid, 'Checking', amount, 0, receivedBalance, 'Transfer from ' .. tostring(p.PlayerData.charinfo.account),nil,statementKey(data,cid,'Received-'..p.PlayerData.citizenid))
     -- Asked now, after the ledger calls yielded: he may have connected or left meanwhile.
     local okOnline, online = pcall(function() return exports.w_lib:FwGetPlayerByCitizenId(cid) end)
@@ -280,7 +323,7 @@ w.addCommand('givecash', {help=locale('cmd.givecash'), params={{name='id',help=l
     TriggerClientEvent('w_banking:client:notify',id,'notify.received_cash','success',amount,w.citizen.label({ citizenid = p.PlayerData.citizenid, name = getCharacterName(src) }))
 end)
 
-w.callback.register('w_banking:branches',function() return exports.w_lib:EconIsReady() and exports.w_lib:EconGetBanks() or {} end)
+w.callback.register('w_banking:branches', function() return activeBanks() end)
 
 -- A deleted character leaves nothing here, so its citizen id can be handed to someone else.
 --   exports.w_banking:PurgeCharacter(citizenid, ctx) -> true, { [thing] = n } | false, reason

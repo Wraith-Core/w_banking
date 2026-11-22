@@ -1,6 +1,12 @@
 -- Database acknowledgement precedes cache changes and successful replies.
+-- Uses w_centralbank ledger when started, and standard MySQL bank_accounts.amount otherwise.
 BankAccounts = { ready = false, locks = {} }
 savingsAccounts, gangAccounts = {}, {}
+
+local function usesCentralBank()
+    return GetResourceState('w_centralbank') == 'started'
+end
+
 function BankAccounts.validAmount(value)
     local n = tonumber(value)
     if not n or n ~= n or n <= 0 or n > (Config.MaxTransaction or 1000000000) then return nil end
@@ -12,7 +18,7 @@ end
 function BankAccounts.statement(cid, kind, deposited, withdrawn, balance, description, gid, requestKey)
     local ok, result = pcall(MySQL.insert.await,
         "INSERT IGNORE INTO bank_statements (citizenid, gangid, account, deposited, withdraw, balance, date, type, request_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?,''))",
-        { cid or '', gid or '', kind, deposited, withdrawn, balance, os.date('%Y-%m-%d %H:%M:%S'), tostring(description or kind):sub(1,255), requestKey or '' })
+        { cid or '', gid or '', kind, deposited, withdrawn, balance, os.date('%Y-%m-%d %H:%M:%S'), tostring(description or kind):sub(1, 255), requestKey or '' })
     if not ok then print(('[w_banking] Statement write failed: %s'):format(tostring(result))) end
     return ok
 end
@@ -22,23 +28,48 @@ function BankAccounts.load(owner, kind)
     local row = MySQL.single.await(('SELECT * FROM bank_accounts WHERE %s = ? AND account_type = ? ORDER BY record_id LIMIT 1'):format(column), { owner, kind })
     if not row then return nil end
     local id = row.record_id
-    local accountId='banklegacy:'..id
+    local accountId = 'banklegacy:' .. id
+
     local function ready()
-        return exports.w_lib:EconIsReady()
-            and exports.w_lib:EconEnsureAccount(accountId,kind=='Savings' and owner or ('gang:'..owner),'legacy_bank')
-    end
-    local function getBalance()
-        return ready() and exports.w_lib:EconGetBalance(accountId) or 0
-    end
-    local function change(amount,description,withdraw)
-        amount=BankAccounts.validAmount(amount)
-        if not amount or not ready() then return false end
-        local ok=exports.w_lib:EconAdjustAccount(accountId,withdraw and -amount or amount,description or 'legacy-bank')
-        if ok then
-            BankAccounts.statement(kind=='Savings' and owner or nil,kind,withdraw and 0 or amount,withdraw and amount or 0,getBalance(),description,kind=='Gang' and owner or nil)
+        if usesCentralBank() then
+            return exports.w_lib:EconIsReady()
+                and exports.w_lib:EconEnsureAccount(accountId, kind == 'Savings' and owner or ('gang:' .. owner), 'legacy_bank')
         end
-        return ok==true
+        return BankAccounts.ready == true
     end
+
+    local function getBalance()
+        if usesCentralBank() then
+            return ready() and exports.w_lib:EconGetBalance(accountId) or 0
+        end
+        local val = MySQL.scalar.await('SELECT amount FROM bank_accounts WHERE record_id = ? LIMIT 1', { id })
+        return tonumber(val) or 0
+    end
+
+    local function change(amount, description, withdraw)
+        amount = BankAccounts.validAmount(amount)
+        if not amount or not ready() then return false end
+        if usesCentralBank() then
+            local ok = exports.w_lib:EconAdjustAccount(accountId, withdraw and -amount or amount, description or 'legacy-bank')
+            if ok then
+                BankAccounts.statement(kind == 'Savings' and owner or nil, kind, withdraw and 0 or amount, withdraw and amount or 0, getBalance(), description, kind == 'Gang' and owner or nil)
+            end
+            return ok == true
+        end
+
+        local affected
+        if withdraw then
+            affected = MySQL.update.await('UPDATE bank_accounts SET amount = ROUND(amount - ?, 2) WHERE record_id = ? AND amount >= ?', { amount, id, amount })
+        else
+            affected = MySQL.update.await('UPDATE bank_accounts SET amount = ROUND(amount + ?, 2) WHERE record_id = ?', { amount, id })
+        end
+        if (tonumber(affected) or 0) > 0 then
+            BankAccounts.statement(kind == 'Savings' and owner or nil, kind, withdraw and 0 or amount, withdraw and amount or 0, getBalance(), description, kind == 'Gang' and owner or nil)
+            return true
+        end
+        return false
+    end
+
     local account = {
         accountId = accountId,
         GetBalance = getBalance,
@@ -53,7 +84,7 @@ function BankAccounts.load(owner, kind)
 end
 
 function BankAccounts.create(owner, kind, starting)
-    if not exports.w_lib:EconIsReady() then return false end
+    if usesCentralBank() and not exports.w_lib:EconIsReady() then return false end
     if not BankAccounts.ready or type(owner) ~= 'string' or owner == '' then return false end
     local key = kind .. ':' .. owner
     if BankAccounts.locks[key] then return false end
@@ -72,7 +103,7 @@ function BankAccounts.create(owner, kind, starting)
         if not inserted then return false end
         registry[owner] = BankAccounts.load(owner, kind)
         if not registry[owner] then return false end
-        if starting>0 and not registry[owner].AddMoney(starting,'Create legacy bank account') then return false end
+        if starting > 0 and not registry[owner].AddMoney(starting, 'Create bank account') then return false end
         return true
     end)
     BankAccounts.locks[key] = nil
@@ -80,16 +111,14 @@ function BankAccounts.create(owner, kind, starting)
     return ok and result == true
 end
 
-exports.w_lib:EconOnBalanceChanged(function(account,balance)
-    local id=tostring(account or ''):match('^banklegacy:(%d+)$')
-    if id then MySQL.update('UPDATE bank_accounts SET amount=? WHERE record_id=?',{balance,tonumber(id)}) end
+exports.w_lib:EconOnBalanceChanged(function(account, balance)
+    if not usesCentralBank() then return end
+    local id = tostring(account or ''):match('^banklegacy:(%d+)$')
+    if id then MySQL.update('UPDATE bank_accounts SET amount=? WHERE record_id=?', { balance, tonumber(id) }) end
 end)
 
--- w_core moved a character to another citizen id (w_core/server/citizen.lua) after renaming
--- bank_accounts.citizenid. Rebuild the savings entry under the new id instead of moving it:
--- the old object's closures still carry the old owner (statements, EnsureAccount owner).
-exports.w_lib:FwOnCitizenIdChanged(function(old,new)
-    old,new=tostring(old),tostring(new)
-    savingsAccounts[old]=nil
-    CreateThread(function() savingsAccounts[new]=BankAccounts.load(new,'Savings') end)
+exports.w_lib:FwOnCitizenIdChanged(function(old, new)
+    old, new = tostring(old), tostring(new)
+    savingsAccounts[old] = nil
+    CreateThread(function() savingsAccounts[new] = BankAccounts.load(new, 'Savings') end)
 end)
