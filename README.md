@@ -1,62 +1,32 @@
 # w_banking
 
-## 2.1.1 (2026-11-08)
+Banking system for **Wraith Framework RedM** featuring bank teller locations across major towns, personal savings accounts, gang accounts, transfers, transaction statements, and `/givecash`.
 
-- **شاشة البنك رجعت في وسط الشاشة** وبنفس حجمها القديم، بالعربي والإنجليزي، بدل أن تكون على طرف الشاشة. الشكل الجديد كما هو.
+## Key Features
 
-## 2.1.0 (2026-11-08)
-
-- **شاشة البنك بالتصميم الموحد:** لوحة على طرف الشاشة بدل النافذة الوسطى، الخدمات تبويبات (نظرة عامة، إيداع، سحب، حوالات، ادخار، سجل العمليات)،
-  والتأكيد ورقة بيضاء صغيرة. الأرصدة بخط RDR Catalogue، والزر الرئيسي شريط أحمر.
-- كل النصوص من ملفات اللغة وبالعربية، وأُزيلت العبارات الإنجليزية من رأس الشاشة.
-- تناسب الشاشة من 720p إلى 8K والشاشات العريضة. الصفحة تُبنى بـ vite (`nui/src` -> `nui/build`، `npm run build` داخل nui).
-
-## 2.0.3 (2026-11-01)
-
-- **رسالة الرفض تذكر السبب والأرقام:** «نقدك لا يكفي: المطلوب 12.50$ ومعك 5.00$»، «رصيدك البنكي لا يكفي: المطلوب … مع ضريبة البنك، ورصيدك …»،
-  «رصيد الادخار لا يكفي»، «حسابك مجمّد لدى البنك المركزي»، و«البنك غير متاح الآن». كان البنك يقول «رصيدك لا يكفي» لكل رفض.
-- `/givecash` يذكر ما معك من نقد إذا كان المبلغ أكبر منه.
-
-ما يحتاج تجربة داخل اللعبة: سحب مبلغ أكبر من الرصيد، إيداع أكبر من النقد، تحويل أكبر من الرصيد.
-
-## الإصدار 2.0.2 — 2026-10-30
-
-يمكن إيداع وسحب وتحويل مبالغ بأجزاء الدولار حتى منزلتين عشريتين، مثل 0.75. نصوص الواجهة تأتي من ملفات اللغة، بما فيها رسائل الضريبة وتأكيد العملية.
-
-ما يحتاج تجربة داخل اللعبة: إيداع وسحب 0.75 والتحويل بين حسابين، والتأكد من الضريبة.
-
-- Banking System for Wraith Core RedM
-
-## Features
-- Withdraw / Deposit at the bank counters (Valentine, Rhodes, Saint Denis, Blackwater)
-- Transfer funds to another character's account number or citizen ID (online or offline)
-- Savings account per character
-- Gang account (server exports `createGangAccount` / `gang`)
-- `/givecash [citizen id] [amount]` to hand cash to a nearby player (`#5` names whoever is on server id 5)
-- 2.0.1: a bank robbery linked to a branch (w_heists 1.1.0) — while it runs, our teller and the counter prompt of that
-  branch are gone and the heist's own teller (same model, same spot) stands there and raises his hands; they come back
-  when the run is over (`GlobalState['w_heists:robbed'].banks[<branch id>]`)
-
-## Dependencies
-- w_lib (shared bootstrap `@w_lib/init.lua`: callbacks, commands, locale, blips, entity creation)
-- w_core
-- w_smallresources - Log bank activity
-
-## Language
-The library controls the language (`setr w_lib:locale "ar"` in server.cfg, or the player's choice in `/w_lib`).
-The dictionaries live in `locales/ar.json` and `locales/en.json`; the NUI page takes its strings and
-text direction from Lua on open and on every switch.
-
-## Interaction
-Bank clerks are reached through the library NUI prompt (w_lib `w.prompt.at`) in front of the counter; the key and radius are set in `Config.Prompt` (no target integration).
+- Bank tellers in Valentine, Rhodes, Saint Denis, Blackwater, and more.
+- Personal savings accounts (`bank_accounts`), gang accounts, and full transaction statements (`bank_statements`).
+- Player-to-player transfers and `/givecash <id> <amount>`.
 
 ## Installation
-- Put the resource in the `[wraith]` directory.
-- Import `w_banking.sql` in your database
-- Add the following code to your server.cfg
+
+1. Import `w_banking.sql` into your database.
+2. Place `w_banking` in `resources/[wraith]/w_banking`.
+3. Add `ensure w_banking` to `server.cfg` after `w_lib` and `w_core`.
+
+## Key Exports
+
+```lua
+exports.w_banking:openAccountScreen()
+exports.w_banking:createSavingsAccount(citizenid)
+exports.w_banking:createGangAccount(gangId)
 ```
-ensure w_lib
-ensure w_core
-ensure w_smallresources
-ensure w_banking
-```
+
+## Documentation & Links
+
+- **Developer Docs:** https://wraith-core.github.io/docs/#/resources/economy-jobs
+- **txAdmin Recipe:** https://github.com/Wraith-Core/txAdminRecipe
+
+## License
+
+GPL-3.0 — see [LICENSE](LICENSE).
